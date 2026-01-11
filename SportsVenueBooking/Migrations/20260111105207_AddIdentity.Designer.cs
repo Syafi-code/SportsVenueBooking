@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SportsVenueBooking.Data;
 
@@ -11,9 +12,11 @@ using SportsVenueBooking.Data;
 namespace SportsVenueBooking.Migrations
 {
     [DbContext(typeof(SportsVenueBookingContext))]
-    partial class SportsVenueBookingContextModelSnapshot : ModelSnapshot
+    [Migration("20260111105207_AddIdentity")]
+    partial class AddIdentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -47,29 +50,6 @@ namespace SportsVenueBooking.Migrations
                         .HasFilter("[NormalizedName] IS NOT NULL");
 
                     b.ToTable("AspNetRoles", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "student-role-id",
-                            ConcurrencyStamp = "422a025f-ccc8-46e0-803e-3f6d00cab8c1",
-                            Name = "Student",
-                            NormalizedName = "STUDENT"
-                        },
-                        new
-                        {
-                            Id = "guest-role-id",
-                            ConcurrencyStamp = "04f63530-5884-418d-812a-7d445e53a23b",
-                            Name = "Guest",
-                            NormalizedName = "GUEST"
-                        },
-                        new
-                        {
-                            Id = "administrator-role-id",
-                            ConcurrencyStamp = "30908147-1692-4f7f-8411-9f4521aa8f7f",
-                            Name = "Administrator",
-                            NormalizedName = "ADMINISTRATOR"
-                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
