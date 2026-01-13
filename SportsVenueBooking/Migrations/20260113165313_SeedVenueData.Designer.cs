@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SportsVenueBooking.Data;
 
@@ -11,9 +12,11 @@ using SportsVenueBooking.Data;
 namespace SportsVenueBooking.Migrations
 {
     [DbContext(typeof(SportsVenueBookingContext))]
-    partial class SportsVenueBookingContextModelSnapshot : ModelSnapshot
+    [Migration("20260113165313_SeedVenueData")]
+    partial class SeedVenueData
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -52,21 +55,21 @@ namespace SportsVenueBooking.Migrations
                         new
                         {
                             Id = "student-role-id",
-                            ConcurrencyStamp = "327b7ab6-c601-41b5-a85d-0aef1a2f0110",
+                            ConcurrencyStamp = "882af119-bc77-4a47-8870-7ff544bef5c2",
                             Name = "Student",
                             NormalizedName = "STUDENT"
                         },
                         new
                         {
                             Id = "guest-role-id",
-                            ConcurrencyStamp = "1a7c4f81-956e-40a6-9583-22c7836425cb",
+                            ConcurrencyStamp = "88cd4ab4-d76e-4f0f-8ccf-adb93921008b",
                             Name = "Guest",
                             NormalizedName = "GUEST"
                         },
                         new
                         {
                             Id = "administrator-role-id",
-                            ConcurrencyStamp = "e91ae76d-25de-48ab-8c17-d083ab9e10c1",
+                            ConcurrencyStamp = "8a648d04-0781-4845-828d-7fab8ffede96",
                             Name = "Administrator",
                             NormalizedName = "ADMINISTRATOR"
                         });
@@ -219,9 +222,6 @@ namespace SportsVenueBooking.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
-
-                    b.Property<int>("SchoolID")
-                        .HasColumnType("int");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");

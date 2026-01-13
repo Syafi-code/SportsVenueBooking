@@ -3,44 +3,88 @@
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using SportsVenueBooking.Domain
 @using SportsVenueBooking.Data
+@using Microsoft.AspNetCore.Authorization
 @implements IAsyncDisposable
 @inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
+@inject NavigationManager NavigationManager
 
-<PageTitle>Index</PageTitle>
+<PageTitle>Browse Venues</PageTitle>
 
-<h1>Index</h1>
+<h1>Available Venues</h1>
 
-<p>
-    <a href="venues/create">Create New</a>
-</p>
+<AuthorizeView Roles="Administrator">
+    <Authorized>
+        <p>
+            <a href="venues/create" class="btn btn-primary">Create New Venue</a>
+        </p>
+    </Authorized>
+</AuthorizeView>
 
-<QuickGrid Class="table" Items="context.Venue">
-    <PropertyColumn Property="venue => venue.VenueName" />
-    <PropertyColumn Property="venue => venue.VenueType" />
-    <PropertyColumn Property="venue => venue.OpeningHours" />
-    <PropertyColumn Property="venue => venue.Capacity" />
-    <PropertyColumn Property="venue => venue.Facilities" />
-    <PropertyColumn Property="venue => venue.ImageUrl" />
-    <PropertyColumn Property="venue => venue.IsAvailable" />
-    <PropertyColumn Property="venue => venue.SchoolID" />
-    <PropertyColumn Property="venue => venue.DateCreated" />
-    <PropertyColumn Property="venue => venue.DateUpdated" />
-    <PropertyColumn Property="venue => venue.CreatedBy" />
-    <PropertyColumn Property="venue => venue.UpdatedBy" />
+<QuickGrid Class="table table-striped" Items="FilteredVenues">
+    <PropertyColumn Property="venue => venue.VenueName" Title="Venue Name" />
+    <PropertyColumn Property="venue => venue.VenueType" Title="Type" />
+    <PropertyColumn Property="venue => venue.Capacity" Title="Capacity" />
+    <PropertyColumn Property="venue => venue.OpeningHours" Title="Opening Hours" />
 
-    <TemplateColumn Context="venue">
-        <a href="@($"venues/edit?id={venue.Id}")">Edit</a> |
-        <a href="@($"venues/details?id={venue.Id}")">Details</a> |
-        <a href="@($"venues/delete?id={venue.Id}")">Delete</a>
+    <TemplateColumn Title="School">
+        @GetSchoolName(context)
+    </TemplateColumn>
+
+    <TemplateColumn Title="Available">
+        @if (context.IsAvailable)
+        {
+            <span class="badge bg-success">Available</span>
+        }
+        else
+        {
+            <span class="badge bg-danger">Not Available</span>
+        }
+    </TemplateColumn>
+
+    <TemplateColumn Context="venue" Title="Actions">
+        <AuthorizeView Roles="Administrator">
+            <Authorized>
+                <a href="@($"venues/edit?id={venue.Id}")" class="btn btn-sm btn-warning">Edit</a>
+                <a href="@($"venues/delete?id={venue.Id}")" class="btn btn-sm btn-danger">Delete</a>
+            </Authorized>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Student">
+            <Authorized>
+                @if (venue.IsAvailable)
+                {
+                    <a href="@($"/bookings/create?venueId={venue.Id}")" class="btn btn-sm btn-primary">Book Now</a>
+                }
+            </Authorized>
+        </AuthorizeView>
+
+        <a href="@($"venues/details?id={venue.Id}")" class="btn btn-sm btn-info">Details</a>
     </TemplateColumn>
 </QuickGrid>
 
 @code {
     private SportsVenueBookingContext context = default!;
+    private IQueryable<Venue>? FilteredVenues;
+    private Dictionary<int, string> SchoolNames = new();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         context = DbFactory.CreateDbContext();
+
+        // Load schools for displaying names
+        var schools = await context.Schools.ToListAsync();
+        SchoolNames = schools.ToDictionary(s => s.Id, s => s.SchoolName ?? "Unknown");
+
+        // Load venues
+        FilteredVenues = context.Venue
+            .OrderBy(v => v.SchoolID)
+            .ThenBy(v => v.VenueName)
+            .AsQueryable();
+    }
+
+    private string GetSchoolName(Venue venue)
+    {
+        return SchoolNames.TryGetValue(venue.SchoolID, out var name) ? name : "Unknown";
     }
 
     public async ValueTask DisposeAsync() => await context.DisposeAsync();

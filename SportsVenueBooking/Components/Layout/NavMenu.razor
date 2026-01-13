@@ -1,5 +1,6 @@
 ﻿@implements IDisposable
 @inject NavigationManager NavigationManager
+
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">SportsVenueBooking</a>
@@ -17,23 +18,37 @@
         </div>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            <NavLink class="nav-link" href="venues">
+                <span class="bi bi-building" aria-hidden="true"></span> Browse Venues
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-        <AuthorizeView>
+        <AuthorizeView Context="userContext">
             <Authorized>
+                <!-- My Bookings -->
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
+                    <NavLink class="nav-link" href="bookings">
+                        <span class="bi bi-calendar-check" aria-hidden="true"></span> My Bookings
                     </NavLink>
                 </div>
+
+                <!-- Admin Only: Manage Venues -->
+                <AuthorizeView Roles="Administrator" Context="adminContext">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="venues/create">
+                                <span class="bi bi-gear" aria-hidden="true"></span> Manage Venues
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="Account/Manage">
+                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @userContext.User.Identity?.Name
+                    </NavLink>
+                </div>
+
                 <div class="nav-item px-3">
                     <form action="Account/Logout" method="post">
                         <AntiforgeryToken />
@@ -44,6 +59,7 @@
                     </form>
                 </div>
             </Authorized>
+
             <NotAuthorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Register">

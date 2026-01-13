@@ -18,6 +18,7 @@ namespace SportsVenueBooking.Data
             base.OnModelCreating(modelBuilder);
             modelBuilder.ApplyConfiguration(new SchoolSeed());
             modelBuilder.ApplyConfiguration(new RoleSeed());
+            modelBuilder.ApplyConfiguration(new VenueSeed());
         }
     }
 }
