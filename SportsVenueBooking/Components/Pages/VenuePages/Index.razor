@@ -4,9 +4,11 @@
 @using SportsVenueBooking.Domain
 @using SportsVenueBooking.Data
 @using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
 @implements IAsyncDisposable
 @inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Browse Venues</PageTitle>
 
@@ -23,9 +25,24 @@
 <QuickGrid Class="table table-striped" Items="FilteredVenues">
     <PropertyColumn Property="venue => venue.VenueName" Title="Venue Name" />
     <PropertyColumn Property="venue => venue.VenueType" Title="Type" />
-    <PropertyColumn Property="venue => venue.Capacity" Title="Capacity" />
     <PropertyColumn Property="venue => venue.OpeningHours" Title="Opening Hours" />
 
+    <TemplateColumn Title="Capacity">
+        @{
+            var slotsLeft = GetAvailableSlots(context);
+            var totalCapacity = context.Capacity;
+        }
+        @totalCapacity
+        @if (slotsLeft > 0)
+        {
+            <span class="text-success"> (@slotsLeft slots left!)</span>
+        }
+        else
+        {
+            <span class="text-danger"> (FULL)</span>
+        }
+    </TemplateColumn>
+    
     <TemplateColumn Title="School">
         @GetSchoolName(context)
     </TemplateColumn>
@@ -71,15 +88,56 @@
     {
         context = DbFactory.CreateDbContext();
 
-        // Load schools for displaying names
+        // Load school names
         var schools = await context.Schools.ToListAsync();
         SchoolNames = schools.ToDictionary(s => s.Id, s => s.SchoolName ?? "Unknown");
 
-        // Load venues
-        FilteredVenues = context.Venue
-            .OrderBy(v => v.SchoolID)
-            .ThenBy(v => v.VenueName)
-            .AsQueryable();
+        // Get current user information
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // Get user ID
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        // Get user's school ID
+        int? userSchoolID = null;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var appUser = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            userSchoolID = appUser?.SchoolID;
+        }
+
+        // Filter venues based on role
+        if (user.IsInRole("Administrator"))
+        {
+            // Admins see ALL venues from all schools
+            FilteredVenues = context.Venue
+                .OrderBy(v => v.SchoolID)
+                .ThenBy(v => v.VenueName)
+                .AsQueryable();
+        }
+        else if (userSchoolID.HasValue)
+        {
+            // Students see only venues from their school that have slots available
+            var studentVenues = context.Venue
+                .Where(v => v.SchoolID == userSchoolID.Value)
+                .ToList();
+
+            // Filter out full venues
+            var availableVenues = studentVenues
+                .Where(v => GetAvailableSlots(v) > 0)
+                .AsQueryable();
+
+            FilteredVenues = availableVenues;
+        }
+        else
+        {
+            // Not logged in - show all venues (but can't book)
+            FilteredVenues = context.Venue
+                .OrderBy(v => v.SchoolID)
+                .ThenBy(v => v.VenueName)
+                .AsQueryable();
+        }
     }
 
     private string GetSchoolName(Venue venue)
@@ -88,4 +146,16 @@
     }
 
     public async ValueTask DisposeAsync() => await context.DisposeAsync();
+
+    private int GetAvailableSlots(Venue venue)
+    {
+        // Count how many people have bookings for this venue today (confirmed bookings only)
+        var bookedSlots = context.Booking
+            .Where(b => b.VenueID == venue.Id)
+            .Where(b => b.Status == "Confirmed")
+            .Where(b => b.BookingDate == DateTime.Today)
+            .Count();
+
+        return venue.Capacity - bookedSlots;
+    }
 }

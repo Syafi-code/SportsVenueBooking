@@ -47,13 +47,12 @@
             <div class="mb-3">
                 <label for="school" class="form-label">School</label>
                 <InputSelect @bind-Value="Input.SchoolID" class="form-select" id="school">
-                    <option value="0">-- Select Your School --</option>
+                    <option value="">-- Select Your School --</option>
                     @foreach (var school in Schools)
                     {
                         <option value="@school.Id">@school.SchoolName</option>
                     }
                 </InputSelect>
-                <ValidationMessage For="() => Input.SchoolID" class="text-danger" />
             </div>
             <div class="form-floating mb-3">
                 <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
@@ -98,7 +97,7 @@
     public async Task RegisterUser(EditContext editContext)
     {
         var user = CreateUser();
-        user.SchoolID = Input.SchoolID;
+        user.SchoolID = Input.SchoolID ?? 0;
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
@@ -190,8 +189,8 @@
         [Display(Name = "Account Type")]
         public string AccountType { get; set; } = "Student";
 
-        [Required(ErrorMessage = "Please select your school")]
+        [Required]
         [Display(Name = "School")]
-        public int SchoolID { get; set; }
+        public int? SchoolID { get; set; }
     }
 }

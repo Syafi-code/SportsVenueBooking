@@ -3,13 +3,16 @@
 @using SportsVenueBooking.Domain
 @inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
 @inject NavigationManager NavigationManager
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@attribute [Authorize(Roles = "Student,Administrator")]
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Edit</PageTitle>
+<PageTitle>Edit Booking</PageTitle>
 
-<h1>Edit</h1>
-
-<h2>Booking</h2>
+<h1>Edit Booking</h1>
 <hr />
+
 @if (Booking is null)
 {
     <p><em>Loading...</em></p>
@@ -17,95 +20,65 @@
 else
 {
     <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-6">
             <EditForm method="post" Model="Booking" OnValidSubmit="UpdateBooking" FormName="edit" Enhance>
                 <DataAnnotationsValidator />
-                <ValidationSummary role="alert"/>
+                <ValidationSummary class="text-danger" role="alert" />
                 <input type="hidden" name="Booking.Id" value="@Booking.Id" />
+
                 <div class="mb-3">
-                    <label for="bookingdate" class="form-label">BookingDate:</label>
-                    <InputDate id="bookingdate" @bind-Value="Booking.BookingDate" class="form-control" />
-                    <ValidationMessage For="() => Booking.BookingDate" class="text-danger" />
+                    <label for="venueid" class="form-label">Venue:</label>
+                    <InputSelect id="venueid" @bind-Value="Booking.VenueID" class="form-select">
+                        @foreach (var venue in Venues)
+                        {
+                            <option value="@venue.Id">@venue.VenueName (@venue.VenueType)</option>
+                        }
+                    </InputSelect>
                 </div>
+
                 <div class="mb-3">
-                    <label for="starttime" class="form-label">StartTime:</label>
-                    <InputDate id="starttime" @bind-Value="Booking.StartTime" class="form-control" />
-                    <ValidationMessage For="() => Booking.StartTime" class="text-danger" />
+                    <label for="bookingdate" class="form-label">Booking Date:</label>
+                    <InputDate id="bookingdate" @bind-Value="Booking.BookingDate" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
                 </div>
+
                 <div class="mb-3">
-                    <label for="endtime" class="form-label">EndTime:</label>
-                    <InputDate id="endtime" @bind-Value="Booking.EndTime" class="form-control" />
-                    <ValidationMessage For="() => Booking.EndTime" class="text-danger" />
+                    <label for="starttime" class="form-label">Start Time:</label>
+                    <InputSelect id="starttime" @bind-Value="SelectedStartTime" class="form-select">
+                        <option value="">-- Select Start Time --</option>
+                        <option value="09:00">9:00 AM</option>
+                        <option value="10:00">10:00 AM</option>
+                        <option value="11:00">11:00 AM</option>
+                        <option value="12:00">12:00 PM</option>
+                        <option value="13:00">1:00 PM</option>
+                        <option value="14:00">2:00 PM</option>
+                        <option value="15:00">3:00 PM</option>
+                        <option value="16:00">4:00 PM</option>
+                        <option value="17:00">5:00 PM</option>
+                        <option value="18:00">6:00 PM</option>
+                        <option value="19:00">7:00 PM</option>
+                        <option value="20:00">8:00 PM</option>
+                    </InputSelect>
                 </div>
+
                 <div class="mb-3">
-                    <label for="status" class="form-label">Status:</label>
-                    <InputText id="status" @bind-Value="Booking.Status" class="form-control" />
-                    <ValidationMessage For="() => Booking.Status" class="text-danger" />
+                    <label for="duration" class="form-label">Duration:</label>
+                    <InputSelect id="duration" @bind-Value="Duration" class="form-select">
+                        <option value="1">1 Hour</option>
+                        <option value="2">2 Hours</option>
+                    </InputSelect>
                 </div>
+
                 <div class="mb-3">
-                    <label for="guestcount" class="form-label">GuestCount:</label>
-                    <InputNumber id="guestcount" @bind-Value="Booking.GuestCount" class="form-control" />
-                    <ValidationMessage For="() => Booking.GuestCount" class="text-danger" />
+                    <label for="specialrequests" class="form-label">Special Requests:</label>
+                    <InputTextArea id="specialrequests" @bind-Value="Booking.SpecialRequests" class="form-control" rows="3" />
                 </div>
-                <div class="mb-3">
-                    <label for="guestemail" class="form-label">GuestEmail:</label>
-                    <InputText id="guestemail" @bind-Value="Booking.GuestEmail" class="form-control" />
-                    <ValidationMessage For="() => Booking.GuestEmail" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="guestentryfee" class="form-label">GuestEntryFee:</label>
-                    <InputNumber id="guestentryfee" @bind-Value="Booking.GuestEntryFee" class="form-control" />
-                    <ValidationMessage For="() => Booking.GuestEntryFee" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="bookingtype" class="form-label">BookingType:</label>
-                    <InputText id="bookingtype" @bind-Value="Booking.BookingType" class="form-control" />
-                    <ValidationMessage For="() => Booking.BookingType" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="specialrequests" class="form-label">SpecialRequests:</label>
-                    <InputText id="specialrequests" @bind-Value="Booking.SpecialRequests" class="form-control" />
-                    <ValidationMessage For="() => Booking.SpecialRequests" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="userid" class="form-label">UserID:</label>
-                    <InputText id="userid" @bind-Value="Booking.UserID" class="form-control" />
-                    <ValidationMessage For="() => Booking.UserID" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="venueid" class="form-label">VenueID:</label>
-                    <InputNumber id="venueid" @bind-Value="Booking.VenueID" class="form-control" />
-                    <ValidationMessage For="() => Booking.VenueID" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="datecreated" class="form-label">DateCreated:</label>
-                    <InputDate id="datecreated" @bind-Value="Booking.DateCreated" class="form-control" />
-                    <ValidationMessage For="() => Booking.DateCreated" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="dateupdated" class="form-label">DateUpdated:</label>
-                    <InputDate id="dateupdated" @bind-Value="Booking.DateUpdated" class="form-control" />
-                    <ValidationMessage For="() => Booking.DateUpdated" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="createdby" class="form-label">CreatedBy:</label>
-                    <InputText id="createdby" @bind-Value="Booking.CreatedBy" class="form-control" />
-                    <ValidationMessage For="() => Booking.CreatedBy" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="updatedby" class="form-label">UpdatedBy:</label>
-                    <InputText id="updatedby" @bind-Value="Booking.UpdatedBy" class="form-control" />
-                    <ValidationMessage For="() => Booking.UpdatedBy" class="text-danger" />
-                </div>
-                <button type="submit" class="btn btn-primary">Save</button>
+
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a href="/bookings" class="btn btn-secondary">Cancel</a>
             </EditForm>
         </div>
     </div>
 }
-
-<div>
-    <a href="/bookings">Back to List</a>
-</div>
 
 @code {
     [SupplyParameterFromQuery]
@@ -114,22 +87,96 @@ else
     [SupplyParameterFromForm]
     private Booking? Booking { get; set; }
 
+    private List<Venue> Venues { get; set; } = new();
+    private string SelectedStartTime { get; set; } = "";
+    private int Duration { get; set; } = 1;
+    private string? ErrorMessage;
+
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
+
         Booking ??= await context.Booking.FirstOrDefaultAsync(m => m.Id == Id);
 
         if (Booking is null)
         {
             NavigationManager.NavigateTo("notfound");
+            return;
         }
+
+        // Get current user's school ID
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        int? userSchoolID = null;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var appUser = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            userSchoolID = appUser?.SchoolID;
+        }
+
+        // Load venues - filter by user's school if student
+        if (user.IsInRole("Administrator"))
+        {
+            // Admins can edit to any venue
+            Venues = await context.Venue
+                .Where(v => v.IsAvailable == true)
+                .OrderBy(v => v.VenueName)
+                .ToListAsync();
+        }
+        else if (userSchoolID.HasValue)
+        {
+            // Students can only change to venues from their school
+            Venues = await context.Venue
+                .Where(v => v.IsAvailable == true && v.SchoolID == userSchoolID.Value)
+                .OrderBy(v => v.VenueName)
+                .ToListAsync();
+        }
+        else
+        {
+            Venues = new List<Venue>();
+        }
+
+        // Calculate duration and start time from existing booking
+        var duration = (Booking.EndTime - Booking.StartTime).TotalHours;
+        Duration = (int)duration;
+
+        SelectedStartTime = Booking.StartTime.ToString("HH:mm");
     }
 
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
     private async Task UpdateBooking()
     {
+        ErrorMessage = null;
+
+        // Validate venue selected
+        if (Booking.VenueID == 0)
+        {
+            ErrorMessage = "Please select a venue.";
+            return;
+        }
+
+        // Validate start time selected
+        if (string.IsNullOrEmpty(SelectedStartTime))
+        {
+            ErrorMessage = "Please select a start time.";
+            return;
+        }
+
         using var context = DbFactory.CreateDbContext();
+
+        // Convert start time string to DateTime
+        var timeParts = SelectedStartTime.Split(':');
+        var startHour = int.Parse(timeParts[0]);
+        var startMinute = int.Parse(timeParts[1]);
+
+        // Set start and end times
+        Booking.StartTime = Booking.BookingDate.AddHours(startHour).AddMinutes(startMinute);
+        Booking.EndTime = Booking.StartTime.AddHours(Duration);
+
+        // Update timestamp
+        Booking.DateUpdated = DateTime.Now;
+
         context.Attach(Booking!).State = EntityState.Modified;
 
         try

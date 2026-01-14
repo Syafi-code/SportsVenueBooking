@@ -3,47 +3,106 @@
 @using Microsoft.AspNetCore.Components.QuickGrid
 @using SportsVenueBooking.Domain
 @using SportsVenueBooking.Data
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@attribute [Authorize(Roles = "Student,Administrator")]
 @implements IAsyncDisposable
 @inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Index</PageTitle>
+<PageTitle>My Bookings</PageTitle>
 
-<h1>Index</h1>
+<h1>My Bookings</h1>
 
 <p>
-    <a href="bookings/create">Create New</a>
+    <a href="bookings/create" class="btn btn-primary">Create New Booking</a>
 </p>
 
-<QuickGrid Class="table" Items="context.Booking">
-    <PropertyColumn Property="booking => booking.BookingDate" />
-    <PropertyColumn Property="booking => booking.StartTime" />
-    <PropertyColumn Property="booking => booking.EndTime" />
-    <PropertyColumn Property="booking => booking.Status" />
-    <PropertyColumn Property="booking => booking.GuestCount" />
-    <PropertyColumn Property="booking => booking.GuestEmail" />
-    <PropertyColumn Property="booking => booking.GuestEntryFee" />
-    <PropertyColumn Property="booking => booking.BookingType" />
-    <PropertyColumn Property="booking => booking.SpecialRequests" />
-    <PropertyColumn Property="booking => booking.UserID" />
-    <PropertyColumn Property="booking => booking.VenueID" />
-    <PropertyColumn Property="booking => booking.DateCreated" />
-    <PropertyColumn Property="booking => booking.DateUpdated" />
-    <PropertyColumn Property="booking => booking.CreatedBy" />
-    <PropertyColumn Property="booking => booking.UpdatedBy" />
+<QuickGrid Class="table table-striped" Items="FilteredBookings">
+    <PropertyColumn Property="booking => booking.BookingDate" Title="Date" Format="yyyy-MM-dd" />
+    <PropertyColumn Property="booking => booking.StartTime" Title="Start Time" Format="hh:mm tt" />
+    <PropertyColumn Property="booking => booking.EndTime" Title="End Time" Format="hh:mm tt" />
 
-    <TemplateColumn Context="booking">
-        <a href="@($"bookings/edit?id={booking.Id}")">Edit</a> |
-        <a href="@($"bookings/details?id={booking.Id}")">Details</a> |
-        <a href="@($"bookings/delete?id={booking.Id}")">Delete</a>
+    <TemplateColumn Title="Venue">
+        @GetVenueName(context)
+    </TemplateColumn>
+
+    <TemplateColumn Title="Status">
+        @if (context.Status == "Confirmed")
+        {
+            <span class="badge bg-success">@context.Status</span>
+        }
+        else if (context.Status == "Cancelled")
+        {
+            <span class="badge bg-danger">@context.Status</span>
+        }
+        else
+        {
+            <span class="badge bg-secondary">@context.Status</span>
+        }
+    </TemplateColumn>
+
+    <PropertyColumn Property="booking => booking.SpecialRequests" Title="Notes" />
+
+    <TemplateColumn Context="booking" Title="Actions">
+        @if (booking.Status == "Confirmed")
+        {
+            <a href="@($"bookings/edit?id={booking.Id}")" class="btn btn-sm btn-warning">Edit</a>
+            <a href="@($"bookings/delete?id={booking.Id}")" class="btn btn-sm btn-danger">Cancel</a>
+        }
+        <a href="@($"bookings/details?id={booking.Id}")" class="btn btn-sm btn-info">Details</a>
     </TemplateColumn>
 </QuickGrid>
 
+@if (FilteredBookings != null && !FilteredBookings.Any())
+{
+    <div class="alert alert-info mt-3">
+        <p>You have no bookings yet. <a href="bookings/create">Create your first booking!</a></p>
+    </div>
+}
+
 @code {
     private SportsVenueBookingContext context = default!;
+    private IQueryable<Booking>? FilteredBookings;
+    private Dictionary<int, string> VenueNames = new();
+    private string? CurrentUserId;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         context = DbFactory.CreateDbContext();
+
+        // Get current user ID
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        CurrentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        // Load venue names
+        var venues = await context.Venue.ToListAsync();
+        VenueNames = venues.ToDictionary(v => v.Id, v => v.VenueName ?? "Unknown");
+
+        // Filter bookings by current user (students see only their bookings)
+        if (user.IsInRole("Administrator"))
+        {
+            // Admins see all bookings
+            FilteredBookings = context.Booking
+                .OrderByDescending(b => b.BookingDate)
+                .ThenByDescending(b => b.StartTime)
+                .AsQueryable();
+        }
+        else
+        {
+            // Students see only their own bookings
+            FilteredBookings = context.Booking
+                .Where(b => b.UserID == CurrentUserId)
+                .OrderByDescending(b => b.BookingDate)
+                .ThenByDescending(b => b.StartTime)
+                .AsQueryable();
+        }
+    }
+
+    private string GetVenueName(Booking booking)
+    {
+        return VenueNames.TryGetValue(booking.VenueID, out var name) ? name : "Unknown";
     }
 
     public async ValueTask DisposeAsync() => await context.DisposeAsync();

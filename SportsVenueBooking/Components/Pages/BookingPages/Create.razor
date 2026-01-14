@@ -13,6 +13,13 @@
 <h1>Create New Booking</h1>
 <hr />
 
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        @ErrorMessage
+    </div>
+}
+
 <div class="row">
     <div class="col-md-6">
         <EditForm method="post" Model="Booking" OnValidSubmit="AddBooking" FormName="create" Enhance>
@@ -28,31 +35,43 @@
                         <option value="@venue.Id">@venue.VenueName (@venue.VenueType)</option>
                     }
                 </InputSelect>
-                <ValidationMessage For="() => Booking.VenueID" class="text-danger" />
             </div>
 
             <div class="mb-3">
                 <label for="bookingdate" class="form-label">Booking Date:</label>
-                <InputDate id="bookingdate" @bind-Value="Booking.BookingDate" class="form-control" />
-                <ValidationMessage For="() => Booking.BookingDate" class="text-danger" />
+                <InputDate id="bookingdate" @bind-Value="Booking.BookingDate" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
             </div>
 
             <div class="mb-3">
                 <label for="starttime" class="form-label">Start Time:</label>
-                <InputDate Type="InputDateType.DateTimeLocal" id="starttime" @bind-Value="Booking.StartTime" class="form-control" />
-                <ValidationMessage For="() => Booking.StartTime" class="text-danger" />
+                <InputSelect id="starttime" @bind-Value="SelectedStartTime" class="form-select">
+                    <option value="">-- Select Start Time --</option>
+                    <option value="09:00">9:00 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="12:00">12:00 PM</option>
+                    <option value="13:00">1:00 PM</option>
+                    <option value="14:00">2:00 PM</option>
+                    <option value="15:00">3:00 PM</option>
+                    <option value="16:00">4:00 PM</option>
+                    <option value="17:00">5:00 PM</option>
+                    <option value="18:00">6:00 PM</option>
+                    <option value="19:00">7:00 PM</option>
+                    <option value="20:00">8:00 PM</option>
+                </InputSelect>
             </div>
 
             <div class="mb-3">
-                <label for="endtime" class="form-label">End Time:</label>
-                <InputDate Type="InputDateType.DateTimeLocal" id="endtime" @bind-Value="Booking.EndTime" class="form-control" />
-                <ValidationMessage For="() => Booking.EndTime" class="text-danger" />
+                <label for="duration" class="form-label">Duration:</label>
+                <InputSelect id="duration" @bind-Value="Duration" class="form-select">
+                    <option value="1">1 Hour</option>
+                    <option value="2">2 Hours</option>
+                </InputSelect>
             </div>
 
             <div class="mb-3">
                 <label for="specialrequests" class="form-label">Special Requests (Optional):</label>
                 <InputTextArea id="specialrequests" @bind-Value="Booking.SpecialRequests" class="form-control" rows="3" />
-                <ValidationMessage For="() => Booking.SpecialRequests" class="text-danger" />
             </div>
 
             <button type="submit" class="btn btn-primary">Create Booking</button>
@@ -67,25 +86,111 @@
 
     private List<Venue> Venues { get; set; } = new();
 
+    [SupplyParameterFromForm]
+    private string SelectedStartTime { get; set; } = "";
+
+    [SupplyParameterFromForm]
+    private int Duration { get; set; } = 1;
+
+    private string? ErrorMessage;
+
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
 
-        // Load all venues
-        Venues = await context.Venue
-            .Where(v => v.IsAvailable == true)
-            .OrderBy(v => v.VenueName)
-            .ToListAsync();
+        // Get current user's school ID
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        int? userSchoolID = null;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var appUser = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            userSchoolID = appUser?.SchoolID;
+        }
+
+        // Load venues - filter by user's school if student, all venues if admin
+        if (user.IsInRole("Administrator"))
+        {
+            // Admins can book any venue
+            Venues = await context.Venue
+                .Where(v => v.IsAvailable == true)
+                .OrderBy(v => v.VenueName)
+                .ToListAsync();
+        }
+        else if (userSchoolID.HasValue)
+        {
+            // Students can only book venues from their school
+            Venues = await context.Venue
+                .Where(v => v.IsAvailable == true && v.SchoolID == userSchoolID.Value)
+                .OrderBy(v => v.VenueName)
+                .ToListAsync();
+        }
+        else
+        {
+            // No school ID - show no venues
+            Venues = new List<Venue>();
+        }
+
+        // Set default date
+        Booking.BookingDate = DateTime.Today;
     }
 
     private async Task AddBooking()
     {
+        ErrorMessage = null;
+
+        // Validate venue selected
+        if (Booking.VenueID == 0)
+        {
+            ErrorMessage = "Please select a venue.";
+            return;
+        }
+
+        // Validate start time selected
+        if (string.IsNullOrEmpty(SelectedStartTime))
+        {
+            ErrorMessage = "Please select a start time.";
+            return;
+        }
+
         using var context = DbFactory.CreateDbContext();
+
+        // Convert start time string to DateTime
+        var timeParts = SelectedStartTime.Split(':');
+        var startHour = int.Parse(timeParts[0]);
+        var startMinute = int.Parse(timeParts[1]);
+
+        // Calculate start and end times
+        var bookingStart = Booking.BookingDate.AddHours(startHour).AddMinutes(startMinute);
+        var bookingEnd = bookingStart.AddHours(Duration);
+
+        // Check for conflicts - see if another booking overlaps
+        var hasConflict = await context.Booking
+            .Where(b => b.VenueID == Booking.VenueID)
+            .Where(b => b.Status == "Confirmed")
+            .Where(b =>
+                (bookingStart >= b.StartTime && bookingStart < b.EndTime) ||  // New booking starts during existing booking
+                (bookingEnd > b.StartTime && bookingEnd <= b.EndTime) ||      // New booking ends during existing booking
+                (bookingStart <= b.StartTime && bookingEnd >= b.EndTime)      // New booking completely covers existing booking
+            )
+            .AnyAsync();
+
+        if (hasConflict)
+        {
+            ErrorMessage = "This time slot is already booked. Please select a different time.";
+            return;
+        }
 
         // Get current user ID
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        // Set start and end times
+        Booking.StartTime = bookingStart;
+        Booking.EndTime = bookingEnd;
 
         // Set booking properties
         Booking.UserID = userId;
