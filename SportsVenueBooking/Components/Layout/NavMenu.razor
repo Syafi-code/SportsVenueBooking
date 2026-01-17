@@ -1,9 +1,11 @@
-﻿@implements IDisposable
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
+@implements IDisposable
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">SportsVenueBooking</a>
+        <a class="navbar-brand" href="">VenueHub</a>
     </div>
 </div>
 
@@ -11,73 +13,98 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
+        
+        <!-- HOME (Everyone) -->
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
 
+        <!-- VENUES (Everyone) -->
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="venues">
                 <span class="bi bi-building" aria-hidden="true"></span> Browse Venues
             </NavLink>
         </div>
 
-        <AuthorizeView Context="userContext">
-            <Authorized>
-                <!-- My Bookings -->
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="bookings">
-                        <span class="bi bi-calendar-check" aria-hidden="true"></span> My Bookings
-                    </NavLink>
-                </div>
-
-                <!-- Admin Only: Manage Venues -->
-                <AuthorizeView Roles="Administrator" Context="adminContext">
-                    <Authorized>
+        <AuthorizeView>
+            <Authorized Context="outerAuth">
+                <!-- STUDENT MENU -->
+                <AuthorizeView Roles="Student">
+                    <Authorized Context="studentAuth">
+                        <div class="nav-section-header">Student</div>
+                        
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="venues/create">
-                                <span class="bi bi-gear" aria-hidden="true"></span> Manage Venues
+                            <NavLink class="nav-link" href="bookings">
+                                <span class="bi bi-calendar-check" aria-hidden="true"></span> My Bookings
                             </NavLink>
                         </div>
                     </Authorized>
                 </AuthorizeView>
 
+                <!-- ADMIN MENU -->
+                <AuthorizeView Roles="Administrator">
+                    <Authorized Context="adminAuth">
+                        <div class="nav-section-header">Admin</div>
+                        
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="admin/dashboard">
+                                <span class="bi bi-speedometer2" aria-hidden="true"></span> Dashboard
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="venues">
+                                <span class="bi bi-building" aria-hidden="true"></span> Manage Venues
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="bookings">
+                                <span class="bi bi-calendar-check" aria-hidden="true"></span> Manage Bookings
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="schools">
+                                <span class="bi bi-building" aria-hidden="true"></span> Manage Schools
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+
+                <!-- ACCOUNT MENU (All Logged In Users) -->
+                <div class="nav-section-header">Account</div>
+
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @userContext.User.Identity?.Name
+                        <span class="bi bi-person-circle" aria-hidden="true"></span> Manage Account
                     </NavLink>
                 </div>
 
-                <div class="nav-item px-3">
-                    <form action="Account/Logout" method="post">
-                        <AntiforgeryToken />
-                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
-                        </button>
-                    </form>
-                </div>
             </Authorized>
-
             <NotAuthorized>
+                <!-- NOT LOGGED IN -->
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Register">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
+                        <span class="bi bi-person-plus" aria-hidden="true"></span> Register
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Login
                     </NavLink>
                 </div>
             </NotAuthorized>
         </AuthorizeView>
+
     </nav>
 </div>
 
 @code {
     private string? currentUrl;
+    
     protected override void OnInitialized()
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
@@ -94,5 +121,4 @@
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
-
 }

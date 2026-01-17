@@ -108,6 +108,15 @@
 .navbar-toggler:checked ~ .nav-scrollable {
     display: block;
 }
+.nav-section-header {
+    padding: 0.5rem 1rem;
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--bs-secondary);
+    letter-spacing: 0.05em;
+}
 
 @media (min-width: 641px) {
     .navbar-toggler {

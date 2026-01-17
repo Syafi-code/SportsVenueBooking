@@ -27,10 +27,10 @@
     <PropertyColumn Property="venue => venue.VenueType" Title="Type" />
     <PropertyColumn Property="venue => venue.OpeningHours" Title="Opening Hours" />
 
-    <TemplateColumn Title="Capacity">
+    <TemplateColumn Context="venue" Title="Capacity">
         @{
-            var slotsLeft = GetAvailableSlots(context);
-            var totalCapacity = context.Capacity;
+            var slotsLeft = GetAvailableSlots(venue);
+            var totalCapacity = venue.Capacity;
         }
         @totalCapacity
         @if (slotsLeft > 0)
@@ -42,13 +42,17 @@
             <span class="text-danger"> (FULL)</span>
         }
     </TemplateColumn>
+
+    <TemplateColumn Context="venue" Title="School">
+        @GetSchoolName(venue)
+    </TemplateColumn>
     
     <TemplateColumn Title="School">
         @GetSchoolName(context)
     </TemplateColumn>
 
-    <TemplateColumn Title="Available">
-        @if (context.IsAvailable)
+    <TemplateColumn Context="venue" Title="Available">
+        @if (venue.IsAvailable)
         {
             <span class="badge bg-success">Available</span>
         }

@@ -1,0 +1,302 @@
+﻿@page "/admin/dashboard"
+@using Microsoft.EntityFrameworkCore
+@using SportsVenueBooking.Domain
+@using SportsVenueBooking.Data
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Administrator")]
+@inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+<h1>Admin Dashboard</h1>
+<hr />
+
+@if (isLoading)
+{
+    <p><em>Loading dashboard...</em></p>
+}
+else
+{
+    <div class="row">
+        <!-- Total Venues Card -->
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <h5 class="card-title">Total Venues</h5>
+                    <h2 class="card-text">@TotalVenues</h2>
+                    <small>Across all schools</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Bookings Today Card -->
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Bookings Today</h5>
+                    <h2 class="card-text">@BookingsToday</h2>
+                    <small>Confirmed bookings</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Students Card -->
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <h5 class="card-title">Total Students</h5>
+                    <h2 class="card-text">@TotalStudents</h2>
+                    <small>Registered users</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Bookings Card -->
+        <div class="col-md-3 mb-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Total Bookings</h5>
+                    <h2 class="card-text">@TotalBookings</h2>
+                    <small>All time</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Bookings Section -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Recent Bookings (Last 10)</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Venue</th>
+                                <th>School</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var booking in RecentBookings)
+                            {
+                                <tr>
+                                    <td>@GetUserEmail(booking.UserID)</td>
+                                    <td>@GetVenueName(booking.VenueID)</td>
+                                    <td>@GetSchoolName(booking.VenueID)</td>
+                                    <td>@booking.BookingDate.ToString("MMM dd, yyyy")</td>
+                                    <td>@booking.StartTime.ToString("hh:mm tt") - @booking.EndTime.ToString("hh:mm tt")</td>
+                                    <td>
+                                        @if (booking.Status == "Confirmed")
+                                        {
+                                            <span class="badge bg-success">@booking.Status</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">@booking.Status</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popular Venues Section -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Most Popular Venues</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Venue</th>
+                                <th>Bookings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var venue in PopularVenues)
+                            {
+                                <tr>
+                                    <td>@venue.VenueName</td>
+                                    <td><span class="badge bg-primary">@venue.BookingCount</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schools Overview -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Bookings by School</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>School</th>
+                                <th>Students</th>
+                                <th>Bookings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var school in SchoolStats)
+                            {
+                                <tr>
+                                    <td>@school.SchoolName</td>
+                                    <td>@school.StudentCount</td>
+                                    <td><span class="badge bg-success">@school.BookingCount</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+
+    // Statistics
+    private int TotalVenues = 0;
+    private int BookingsToday = 0;
+    private int TotalStudents = 0;
+    private int TotalBookings = 0;
+
+    // Data
+    private List<Booking> RecentBookings = new();
+    private List<VenueStats> PopularVenues = new();
+    private List<SchoolStat> SchoolStats = new();
+
+    // Lookups
+    private Dictionary<string, string> UserEmails = new();
+    private Dictionary<int, string> VenueNames = new();
+    private Dictionary<int, string> SchoolNames = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+
+        // Load statistics
+        TotalVenues = await context.Venue.CountAsync();
+        BookingsToday = await context.Booking
+            .Where(b => b.BookingDate == DateTime.Today && b.Status == "Confirmed")
+            .CountAsync();
+        TotalStudents = await context.Users.CountAsync();
+        TotalBookings = await context.Booking.CountAsync();
+
+        // Load recent bookings
+        RecentBookings = await context.Booking
+            .OrderByDescending(b => b.DateCreated)
+            .Take(10)
+            .ToListAsync();
+
+        // Load user emails for display
+        var users = await context.Users.ToListAsync();
+        UserEmails = users.ToDictionary(u => u.Id, u => u.Email ?? "Unknown");
+
+        // Load venue names
+        var venues = await context.Venue.ToListAsync();
+        VenueNames = venues.ToDictionary(v => v.Id, v => v.VenueName ?? "Unknown");
+
+        // Load school names
+        var schools = await context.Schools.ToListAsync();
+        SchoolNames = schools.ToDictionary(s => s.Id, s => s.SchoolName ?? "Unknown");
+
+        // Calculate popular venues
+        var venueBookingCounts = await context.Booking
+            .Where(b => b.Status == "Confirmed")
+            .GroupBy(b => b.VenueID)
+            .Select(g => new { VenueID = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .Take(5)
+            .ToListAsync();
+
+        PopularVenues = venueBookingCounts
+            .Select(v => new VenueStats
+            {
+                VenueName = VenueNames.GetValueOrDefault(v.VenueID, "Unknown"),
+                BookingCount = v.Count
+            })
+            .ToList();
+
+        // Calculate school statistics
+        SchoolStats = new List<SchoolStat>();
+        foreach (var school in schools)
+        {
+            var studentCount = await context.Users
+                .Where(u => u.SchoolID == school.Id)
+                .CountAsync();
+
+            var schoolVenueIds = venues
+                .Where(v => v.SchoolID == school.Id)
+                .Select(v => v.Id)
+                .ToList();
+
+            var bookingCount = await context.Booking
+                .Where(b => schoolVenueIds.Contains(b.VenueID))
+                .CountAsync();
+
+            SchoolStats.Add(new SchoolStat
+            {
+                SchoolName = school.SchoolName ?? "Unknown",
+                StudentCount = studentCount,
+                BookingCount = bookingCount
+            });
+        }
+
+        isLoading = false;
+    }
+
+    private string GetUserEmail(string? userId)
+    {
+        if (string.IsNullOrEmpty(userId)) return "Unknown";
+        return UserEmails.GetValueOrDefault(userId, "Unknown");
+    }
+
+    private string GetVenueName(int venueId)
+    {
+        return VenueNames.GetValueOrDefault(venueId, "Unknown");
+    }
+
+    private string GetSchoolName(int venueId)
+    {
+        var venue = VenueNames.Keys.FirstOrDefault(k => k == venueId);
+        if (venue == 0) return "Unknown";
+
+        using var context = DbFactory.CreateDbContext();
+        var v = context.Venue.FirstOrDefault(x => x.Id == venueId);
+        return v != null ? SchoolNames.GetValueOrDefault(v.SchoolID, "Unknown") : "Unknown";
+    }
+
+    // Helper classes
+    private class VenueStats
+    {
+        public string VenueName { get; set; } = "";
+        public int BookingCount { get; set; }
+    }
+
+    private class SchoolStat
+    {
+        public string SchoolName { get; set; } = "";
+        public int StudentCount { get; set; }
+        public int BookingCount { get; set; }
+    }
+}

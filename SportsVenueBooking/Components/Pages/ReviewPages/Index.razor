@@ -1,46 +1,109 @@
 ﻿@page "/reviews"
 @using Microsoft.EntityFrameworkCore
-@using Microsoft.AspNetCore.Components.QuickGrid
 @using SportsVenueBooking.Domain
 @using SportsVenueBooking.Data
-@implements IAsyncDisposable
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@attribute [Authorize]
 @inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Index</PageTitle>
+<PageTitle>My Reviews</PageTitle>
 
-<h1>Index</h1>
+<h1>My Reviews</h1>
+<hr />
 
-<p>
-    <a href="reviews/create">Create New</a>
-</p>
+@if (MyReviews.Count == 0)
+{
+    <div class="alert alert-info">
+        <p>You haven't written any reviews yet!</p>
+        <p><a href="/venues" class="btn btn-primary">Browse Venues to Review</a></p>
+    </div>
+}
+else
+{
+    @foreach (var review in MyReviews)
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title">@GetVenueName(review.VenueID)</h5>
 
-<QuickGrid Class="table" Items="context.Review">
-    <PropertyColumn Property="review => review.Rating" />
-    <PropertyColumn Property="review => review.Comment" />
-    <PropertyColumn Property="review => review.ReviewDate" />
-    <PropertyColumn Property="review => review.IsApproved" />
-    <PropertyColumn Property="review => review.AdminResponse" />
-    <PropertyColumn Property="review => review.UserID" />
-    <PropertyColumn Property="review => review.VenueID" />
-    <PropertyColumn Property="review => review.DateCreated" />
-    <PropertyColumn Property="review => review.DateUpdated" />
-    <PropertyColumn Property="review => review.CreatedBy" />
-    <PropertyColumn Property="review => review.UpdatedBy" />
+                        <!-- Star Rating -->
+                        <div class="mb-2">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <span style="color: @(i <= review.Rating ? "#ffc107" : "#e4e5e9"); font-size: 1.5rem;">★</span>
+                            }
+                            <span class="ms-2">(@review.Rating/5 stars)</span>
+                        </div>
 
-    <TemplateColumn Context="review">
-        <a href="@($"reviews/edit?id={review.Id}")">Edit</a> |
-        <a href="@($"reviews/details?id={review.Id}")">Details</a> |
-        <a href="@($"reviews/delete?id={review.Id}")">Delete</a>
-    </TemplateColumn>
-</QuickGrid>
+                        <!-- Review Date -->
+                        <p class="text-muted small mb-2">
+                            <strong>Reviewed on:</strong> @review.ReviewDate.ToString("MMMM dd, yyyy")
+                        </p>
+
+                        <!-- Comment -->
+                        <p class="card-text">@review.Comment</p>
+
+                        <!-- Admin Response (if exists) -->
+                        @if (!string.IsNullOrEmpty(review.AdminResponse))
+                        {
+                            <div class="mt-2 p-2 bg-light rounded">
+                                <small><strong>Admin Response:</strong> @review.AdminResponse</small>
+                            </div>
+                        }
+
+                        <!-- Approval Status -->
+                        @if (review.IsApproved)
+                        {
+                            <span class="badge bg-success">Approved ✓</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning">Pending Approval</span>
+                        }
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="ms-3">
+                        <a href="@($"/reviews/edit?id={review.Id}")" class="btn btn-sm btn-warning mb-1">Edit</a>
+                        <a href="@($"/reviews/delete?id={review.Id}")" class="btn btn-sm btn-danger">Delete</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
 
 @code {
-    private SportsVenueBookingContext context = default!;
+    private List<Review> MyReviews = new();
+    private Dictionary<int, string> VenueNames = new();
+    private string? CurrentUserId;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        context = DbFactory.CreateDbContext();
+        using var context = DbFactory.CreateDbContext();
+
+        // Get current user ID
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        CurrentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        // Load venue names
+        var venues = await context.Venue.ToListAsync();
+        VenueNames = venues.ToDictionary(v => v.Id, v => v.VenueName ?? "Unknown Venue");
+
+        // Load user's reviews
+        MyReviews = await context.Review
+            .Where(r => r.UserID == CurrentUserId)
+            .OrderByDescending(r => r.ReviewDate)
+            .ToListAsync();
     }
 
-    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+    private string GetVenueName(int venueId)
+    {
+        return VenueNames.TryGetValue(venueId, out var name) ? name : "Unknown Venue";
+    }
 }

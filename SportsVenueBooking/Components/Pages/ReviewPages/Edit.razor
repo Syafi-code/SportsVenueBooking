@@ -1,139 +1,173 @@
 ﻿@page "/reviews/edit"
+@rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
 @using SportsVenueBooking.Domain
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@attribute [Authorize(Roles = "Student")]
 @inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Edit</PageTitle>
+<PageTitle>Edit Review</PageTitle>
 
-<h1>Edit</h1>
-
-<h2>Review</h2>
+<h1>Edit Your Review</h1>
 <hr />
-@if (Review is null)
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+@if (Review == null)
 {
     <p><em>Loading...</em></p>
 }
 else
 {
-    <div class="row">
-        <div class="col-md-4">
-            <EditForm method="post" Model="Review" OnValidSubmit="UpdateReview" FormName="edit" Enhance>
-                <DataAnnotationsValidator />
-                <ValidationSummary role="alert"/>
-                <input type="hidden" name="Review.Id" value="@Review.Id" />
-                <div class="mb-3">
-                    <label for="rating" class="form-label">Rating:</label>
-                    <InputNumber id="rating" @bind-Value="Review.Rating" class="form-control" />
-                    <ValidationMessage For="() => Review.Rating" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="comment" class="form-label">Comment:</label>
-                    <InputText id="comment" @bind-Value="Review.Comment" class="form-control" />
-                    <ValidationMessage For="() => Review.Comment" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="reviewdate" class="form-label">ReviewDate:</label>
-                    <InputDate id="reviewdate" @bind-Value="Review.ReviewDate" class="form-control" />
-                    <ValidationMessage For="() => Review.ReviewDate" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="isapproved" class="form-label">IsApproved:</label>
-                    <InputCheckbox id="isapproved" @bind-Value="Review.IsApproved" class="form-check-input" />
-                    <ValidationMessage For="() => Review.IsApproved" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="adminresponse" class="form-label">AdminResponse:</label>
-                    <InputText id="adminresponse" @bind-Value="Review.AdminResponse" class="form-control" />
-                    <ValidationMessage For="() => Review.AdminResponse" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="userid" class="form-label">UserID:</label>
-                    <InputText id="userid" @bind-Value="Review.UserID" class="form-control" />
-                    <ValidationMessage For="() => Review.UserID" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="venueid" class="form-label">VenueID:</label>
-                    <InputNumber id="venueid" @bind-Value="Review.VenueID" class="form-control" />
-                    <ValidationMessage For="() => Review.VenueID" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="datecreated" class="form-label">DateCreated:</label>
-                    <InputDate id="datecreated" @bind-Value="Review.DateCreated" class="form-control" />
-                    <ValidationMessage For="() => Review.DateCreated" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="dateupdated" class="form-label">DateUpdated:</label>
-                    <InputDate id="dateupdated" @bind-Value="Review.DateUpdated" class="form-control" />
-                    <ValidationMessage For="() => Review.DateUpdated" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="createdby" class="form-label">CreatedBy:</label>
-                    <InputText id="createdby" @bind-Value="Review.CreatedBy" class="form-control" />
-                    <ValidationMessage For="() => Review.CreatedBy" class="text-danger" />
-                </div>
-                <div class="mb-3">
-                    <label for="updatedby" class="form-label">UpdatedBy:</label>
-                    <InputText id="updatedby" @bind-Value="Review.UpdatedBy" class="form-control" />
-                    <ValidationMessage For="() => Review.UpdatedBy" class="text-danger" />
-                </div>
-                <button type="submit" class="btn btn-primary">Save</button>
-            </EditForm>
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>@VenueName</h5>
+            <p class="text-muted">Original review posted on: @Review.ReviewDate.ToString("MMMM dd, yyyy")</p>
         </div>
     </div>
-}
 
-<div>
-    <a href="/reviews">Back to List</a>
-</div>
+    <EditForm Model="Review" OnValidSubmit="UpdateReview">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+
+        <!-- RADIO BUTTONS FOR RATING -->
+        <div class="mb-3">
+            <label class="form-label">Rating: <strong>@SelectedRating stars</strong></label>
+
+            <div class="mt-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="rating" id="rating1"
+                           checked="@(SelectedRating == 1)" @onchange="() => SelectedRating = 1" />
+                    <label class="form-check-label" for="rating1">
+                        ⭐ (1 star - Poor)
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="rating" id="rating2"
+                           checked="@(SelectedRating == 2)" @onchange="() => SelectedRating = 2" />
+                    <label class="form-check-label" for="rating2">
+                        ⭐⭐ (2 stars - Fair)
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="rating" id="rating3"
+                           checked="@(SelectedRating == 3)" @onchange="() => SelectedRating = 3" />
+                    <label class="form-check-label" for="rating3">
+                        ⭐⭐⭐ (3 stars - Good)
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="rating" id="rating4"
+                           checked="@(SelectedRating == 4)" @onchange="() => SelectedRating = 4" />
+                    <label class="form-check-label" for="rating4">
+                        ⭐⭐⭐⭐ (4 stars - Very Good)
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="rating" id="rating5"
+                           checked="@(SelectedRating == 5)" @onchange="() => SelectedRating = 5" />
+                    <label class="form-check-label" for="rating5">
+                        ⭐⭐⭐⭐⭐ (5 stars - Excellent)
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comment -->
+        <div class="mb-3">
+            <label for="comment" class="form-label">Your Review:</label>
+            <InputTextArea id="comment" @bind-Value="Review.Comment" class="form-control" rows="5" />
+        </div>
+
+        <button type="submit" class="btn btn-primary">Update Review</button>
+        <a href="/reviews" class="btn btn-secondary">Cancel</a>
+    </EditForm>
+}
 
 @code {
     [SupplyParameterFromQuery]
     private int Id { get; set; }
 
-    [SupplyParameterFromForm]
-    private Review? Review { get; set; }
+    private Review Review { get; set; } = default!;
+    private string? VenueName;
+    private string? ErrorMessage;
+    private string? CurrentUserId;
+    private int SelectedRating = 5;
 
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        Review ??= await context.Review.FirstOrDefaultAsync(m => m.Id == Id);
 
-        if (Review is null)
+        // Get current user
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        CurrentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        // Load the review from database
+        Review = await context.Review.FirstOrDefaultAsync(r => r.Id == Id);
+
+        if (Review == null)
         {
-            NavigationManager.NavigateTo("notfound");
+            NavigationManager.NavigateTo("/reviews");
+            return;
         }
+
+        // Check if this review belongs to current user
+        if (Review.UserID != CurrentUserId)
+        {
+            ErrorMessage = "You can only edit your own reviews!";
+            return;
+        }
+
+        // Set SelectedRating from database
+        SelectedRating = Review.Rating;
+
+        // Load venue name
+        var venue = await context.Venue.FirstOrDefaultAsync(v => v.Id == Review.VenueID);
+        VenueName = venue?.VenueName ?? "Unknown Venue";
     }
 
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
     private async Task UpdateReview()
     {
-        using var context = DbFactory.CreateDbContext();
-        context.Attach(Review!).State = EntityState.Modified;
-
-        try
+        // Validate
+        if (SelectedRating < 1 || SelectedRating > 5)
         {
-            await context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!ReviewExists(Review!.Id))
-            {
-                NavigationManager.NavigateTo("notfound");
-            }
-            else
-            {
-                throw;
-            }
+            ErrorMessage = "Please select a rating between 1 and 5 stars.";
+            return;
         }
 
-        NavigationManager.NavigateTo("/reviews");
-    }
+        if (string.IsNullOrWhiteSpace(Review.Comment))
+        {
+            ErrorMessage = "Please write a review comment.";
+            return;
+        }
 
-    private bool ReviewExists(int id)
-    {
         using var context = DbFactory.CreateDbContext();
-        return context.Review.Any(e => e.Id == id);
+
+        // Load original from database
+        var originalReview = await context.Review.FirstOrDefaultAsync(r => r.Id == Review.Id);
+
+        if (originalReview == null)
+        {
+            ErrorMessage = "Review not found!";
+            return;
+        }
+
+        // Update fields directly
+        originalReview.Rating = SelectedRating; // Use SelectedRating variable!
+        originalReview.Comment = Review.Comment;
+        originalReview.DateUpdated = DateTime.Now;
+        originalReview.UpdatedBy = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.Name ?? "Student";
+
+        context.Review.Update(originalReview);
+        await context.SaveChangesAsync();
+
+        NavigationManager.NavigateTo("/reviews", forceLoad: true);
     }
 }
