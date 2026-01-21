@@ -1,0 +1,58 @@
+﻿@page "/announcements"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using SportsVenueBooking.Domain
+@using SportsVenueBooking.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
+
+<PageTitle>Manage Announcements</PageTitle>
+
+<h1>Manage Announcements</h1>
+<hr />
+
+<p>
+    <a href="announcements/create" class="btn btn-primary mb-3">
+        📢 Create New Announcement
+    </a>
+</p>
+
+<QuickGrid Class="table table-striped" Items="context.Announcement">
+    <PropertyColumn Property="announcement => announcement.Title" Title="Title" />
+
+    <TemplateColumn Title="Message" Context="announcement">
+        @(announcement.Message?.Length > 50 ? announcement.Message.Substring(0, 50) + "..." : announcement.Message)
+    </TemplateColumn>
+
+    <TemplateColumn Title="Posted Date" Context="announcement">
+        @announcement.PostedDate.ToString("MMM dd, yyyy")
+    </TemplateColumn>
+
+    <TemplateColumn Title="Status" Context="announcement">
+        @if (announcement.IsActive)
+        {
+            <span class="badge bg-success">Active</span>
+        }
+        else
+        {
+            <span class="badge bg-secondary">Inactive</span>
+        }
+    </TemplateColumn>
+
+    <TemplateColumn Title="Actions" Context="announcement">
+        <a href="@($"announcements/edit?id={announcement.Id}")" class="btn btn-sm btn-warning">Edit</a>
+        <a href="@($"announcements/details?id={announcement.Id}")" class="btn btn-sm btn-info">Details</a>
+        <a href="@($"announcements/delete?id={announcement.Id}")" class="btn btn-sm btn-danger">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private SportsVenueBookingContext context = default!;
+
+    protected override void OnInitialized()
+    {
+        context = DbFactory.CreateDbContext();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

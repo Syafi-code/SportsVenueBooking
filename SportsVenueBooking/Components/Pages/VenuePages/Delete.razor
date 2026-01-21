@@ -1,99 +1,99 @@
 ﻿@page "/venues/delete"
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
 @using SportsVenueBooking.Domain
+@attribute [Authorize(Roles = "Administrator")]
 @inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
 @inject NavigationManager NavigationManager
 
-<PageTitle>Delete</PageTitle>
+<PageTitle>Delete Venue</PageTitle>
 
-<h1>Delete</h1>
+<h1>Delete Venue</h1>
+<p class="text-danger">Are you sure you want to delete this venue?</p>
 
-<p>Are you sure you want to delete this?</p>
-<div>
-    <h2>Venue</h2>
-    <hr />
-    @if (venue is null)
-    {
-        <p><em>Loading...</em></p>
-    }
-    else {
-        <dl class="row">
-            <dt class="col-sm-2">VenueName</dt>
-            <dd class="col-sm-10">@venue.VenueName</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">VenueType</dt>
-            <dd class="col-sm-10">@venue.VenueType</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">OpeningHours</dt>
-            <dd class="col-sm-10">@venue.OpeningHours</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">Capacity</dt>
-            <dd class="col-sm-10">@venue.Capacity</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">Facilities</dt>
-            <dd class="col-sm-10">@venue.Facilities</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">ImageUrl</dt>
-            <dd class="col-sm-10">@venue.ImageUrl</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">IsAvailable</dt>
-            <dd class="col-sm-10">@venue.IsAvailable</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">SchoolID</dt>
-            <dd class="col-sm-10">@venue.SchoolID</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">DateCreated</dt>
-            <dd class="col-sm-10">@venue.DateCreated</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">DateUpdated</dt>
-            <dd class="col-sm-10">@venue.DateUpdated</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">CreatedBy</dt>
-            <dd class="col-sm-10">@venue.CreatedBy</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">UpdatedBy</dt>
-            <dd class="col-sm-10">@venue.UpdatedBy</dd>
-        </dl>
-        <EditForm method="post" Model="venue" OnValidSubmit="DeleteVenue" FormName="delete" Enhance>
-            <button type="submit" class="btn btn-danger" disabled="@(venue is null)">Delete</button> |
-            <a href="/venues">Back to List</a>
-        </EditForm>
-    }
-</div>
+@if (Venue == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <h3 class="mb-0">Venue Details</h3>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Venue Name:</dt>
+                <dd class="col-sm-9">@Venue.VenueName</dd>
+
+                <dt class="col-sm-3">Type:</dt>
+                <dd class="col-sm-9">@Venue.VenueType</dd>
+
+                <dt class="col-sm-3">Capacity:</dt>
+                <dd class="col-sm-9">@Venue.Capacity people</dd>
+
+                <dt class="col-sm-3">School:</dt>
+                <dd class="col-sm-9">@SchoolName</dd>
+
+                <dt class="col-sm-3">Available:</dt>
+                <dd class="col-sm-9">
+                    @if (Venue.IsAvailable)
+                    {
+                        <span class="badge bg-success">Yes</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">No</span>
+                    }
+                </dd>
+            </dl>
+
+            <EditForm Model="Venue" OnValidSubmit="DeleteVenue" FormName="delete" Enhance>
+                <button type="submit" class="btn btn-danger">Delete Venue</button>
+                <a href="/venues" class="btn btn-secondary">Cancel</a>
+            </EditForm>
+        </div>
+    </div>
+}
 
 @code {
-    private Venue? venue;
-
     [SupplyParameterFromQuery]
     private int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Domain.Venue? Venue { get; set; }
+
+    private string SchoolName = "";
 
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        venue = await context.Venue.FirstOrDefaultAsync(m => m.Id == Id);
 
-        if (venue is null)
+        Venue ??= await context.Venue.FirstOrDefaultAsync(m => m.Id == Id);
+
+        if (Venue == null)
         {
-            NavigationManager.NavigateTo("notfound");
+            NavigationManager.NavigateTo("/venues");
+            return;
         }
+
+        // Load school name
+        var school = await context.Schools.FirstOrDefaultAsync(s => s.Id == Venue.SchoolID);
+        SchoolName = school?.SchoolName ?? "Unknown";
     }
 
     private async Task DeleteVenue()
     {
         using var context = DbFactory.CreateDbContext();
-        context.Venue.Remove(venue!);
-        await context.SaveChangesAsync();
+
+        var venue = await context.Venue.FindAsync(Id);
+
+        if (venue != null)
+        {
+            context.Venue.Remove(venue);
+            await context.SaveChangesAsync();
+        }
+
         NavigationManager.NavigateTo("/venues");
     }
 }

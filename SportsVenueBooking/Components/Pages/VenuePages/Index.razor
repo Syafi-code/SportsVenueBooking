@@ -108,7 +108,7 @@
         if (!string.IsNullOrEmpty(userId))
         {
             var appUser = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-            userSchoolID = appUser?.SchoolID;
+            userSchoolID = appUser?.SchoolId;
         }
 
         // Filter venues based on role

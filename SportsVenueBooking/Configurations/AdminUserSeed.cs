@@ -19,7 +19,7 @@ namespace SportsVenueBooking.Configurations
                 Email = "admin@sportsvenue.com",
                 NormalizedEmail = "ADMIN@SPORTSVENUE.COM",
                 EmailConfirmed = true,
-                SchoolID = 1,
+                SchoolId = 1,
                 SecurityStamp = Guid.NewGuid().ToString(),
                 ConcurrencyStamp = Guid.NewGuid().ToString()
             };

@@ -5,9 +5,9 @@
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.EntityFrameworkCore
 @using SportsVenueBooking.Data
 @using SportsVenueBooking.Domain
-@using Microsoft.EntityFrameworkCore
 
 @inject UserManager<SportsVenueBookingUser> UserManager
 @inject IUserStore<SportsVenueBookingUser> UserStore
@@ -16,63 +16,69 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
-@inject RoleManager<IdentityRole> RoleManager
-@inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
+@inject IDbContextFactory<SportsVenueBookingContext> DbFactory
 
 <PageTitle>Register</PageTitle>
 
-<h1>Register</h1>
+<!-- CENTERED REGISTER CONTAINER -->
+<div class="auth-container">
+    <div class="auth-card">
+        <!-- HEADER -->
+        <div class="auth-header">
+            <h1>Create Account</h1>
+            <p>Sign up to book sports venues</p>
+        </div>
 
-<div class="row">
-    <div class="col-md-4">
+        <!-- REGISTER FORM -->
         <StatusMessage Message="@Message" />
+
         <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
             <DataAnnotationsValidator />
-            <h2>Create a new account.</h2>
-            <hr />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <label for="email">Email</label>
+
+            <!-- EMAIL -->
+            <div class="form-group">
+                <label for="email" class="form-label">Email</label>
+                <InputText @bind-Value="Input.Email" class="form-control" autocomplete="username"
+                           placeholder="student@tp.edu.sg" aria-required="true" />
                 <ValidationMessage For="() => Input.Email" class="text-danger" />
             </div>
-            <div class="mb-3">
-                <label for="accountType" class="form-label">Account Type</label>
-                <InputSelect @bind-Value="Input.AccountType" class="form-select" id="accountType">
-                    <option value="Student">Student</option>
-                    <option value="Guest">Guest</option>
-                </InputSelect>
-                <ValidationMessage For="() => Input.AccountType" class="text-danger" />
-            </div>
-            <div class="mb-3">
+
+            <div class="form-group">
                 <label for="school" class="form-label">School</label>
-                <InputSelect @bind-Value="Input.SchoolID" class="form-select" id="school">
-                    <option value="">-- Select Your School --</option>
+                <InputSelect @bind-Value="Input.SchoolId" class="form-select">
+                    <option value="0">-- Select Your School --</option>
                     @foreach (var school in Schools)
                     {
                         <option value="@school.Id">@school.SchoolName</option>
                     }
                 </InputSelect>
+                <ValidationMessage For="() => Input.SchoolId" class="text-danger" />
             </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label for="password">Password</label>
+
+            <!-- PASSWORD -->
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <InputText type="password" @bind-Value="Input.Password" class="form-control"
+                           autocomplete="new-password" placeholder="••••••••" aria-required="true" />
                 <ValidationMessage For="() => Input.Password" class="text-danger" />
             </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label for="confirm-password">Confirm Password</label>
+
+            <!-- CONFIRM PASSWORD -->
+            <div class="form-group">
+                <label for="confirm-password" class="form-label">Confirm Password</label>
+                <InputText type="password" @bind-Value="Input.ConfirmPassword" class="form-control"
+                           autocomplete="new-password" placeholder="••••••••" aria-required="true" />
                 <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
             </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+
+            <!-- REGISTER BUTTON -->
+            <button type="submit" class="btn btn-primary btn-block">Create Account</button>
         </EditForm>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr />
-            <ExternalLoginPicker />
-        </section>
+
+        <!-- FOOTER LINKS -->
+        <div class="auth-footer">
+            <p>Already have an account? <a href="/Account/Login">Sign in</a></p>
+        </div>
     </div>
 </div>
 
@@ -88,21 +94,14 @@
 
     private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
 
-    protected override async Task OnInitializedAsync()
-    {
-        using var context = DbFactory.CreateDbContext();
-        Schools = await context.Schools.OrderBy(s => s.SchoolName).ToListAsync();
-    }
-
     public async Task RegisterUser(EditContext editContext)
     {
         var user = CreateUser();
-        user.SchoolID = Input.SchoolID ?? 0;
+        user.SchoolId = Input.SchoolId;
 
         await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
         await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-
 
         var result = await UserManager.CreateAsync(user, Input.Password);
 
@@ -114,17 +113,8 @@
 
         Logger.LogInformation("User created a new account with password.");
 
-        // Create the user role if it doesn't exist
-        if (!await RoleManager.RoleExistsAsync(Input.AccountType))
-        {
-            await RoleManager.CreateAsync(new IdentityRole(Input.AccountType));
-        }
-
-        // Add the user to the user role
-        await UserManager.AddToRoleAsync(user, Input.AccountType);
-
-        // Add the user id as claim when user registers
-        await UserManager.AddClaimAsync(user, new System.Security.Claims.Claim("userId", user.Id));
+        // Assign "Student" role by default
+        await UserManager.AddToRoleAsync(user, "Student");
 
         var userId = await UserManager.GetUserIdAsync(user);
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
@@ -154,8 +144,7 @@
         }
         catch
         {
-            throw new InvalidOperationException($"Can't create an instance of '{nameof(SportsVenueBookingUser)}'. " +
-                $"Ensure that '{nameof(SportsVenueBookingUser)}' is not an abstract class and has a parameterless constructor.");
+            throw new InvalidOperationException($"Can't create an instance of '{nameof(SportsVenueBookingUser)}'.");
         }
     }
 
@@ -167,13 +156,20 @@
         }
         return (IUserEmailStore<SportsVenueBookingUser>)UserStore;
     }
-
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        Schools = await context.Schools.ToListAsync();
+    }
     private sealed class InputModel
     {
         [Required]
         [EmailAddress]
         [Display(Name = "Email")]
         public string Email { get; set; } = "";
+
+        [Required]
+        public int SchoolId { get; set; }
 
         [Required]
         [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
@@ -185,12 +181,5 @@
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = "";
-
-        [Display(Name = "Account Type")]
-        public string AccountType { get; set; } = "Student";
-
-        [Required]
-        [Display(Name = "School")]
-        public int? SchoolID { get; set; }
     }
 }

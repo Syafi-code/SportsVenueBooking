@@ -159,7 +159,7 @@ else
     {
         using var context = DbFactory.CreateDbContext();
 
-        // 1. Load the venue
+        //Load the venue
         Venue = await context.Venue.FirstOrDefaultAsync(v => v.Id == Id);
 
         if (Venue == null)
@@ -168,35 +168,35 @@ else
             return;
         }
 
-        // 2. Load school name
+        //Load school name
         var school = await context.Schools.FirstOrDefaultAsync(s => s.Id == Venue.SchoolID);
         SchoolName = school?.SchoolName ?? "Unknown";
 
-        // 3. Get current user ID
+        //Get current user ID
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         CurrentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        // 4. Load reviews for this venue (only approved ones)
+        //Load reviews for this venue
         Reviews = await context.Review
-            .Where(r => r.VenueID == Id && r.IsApproved == true)
+            .Where(r => r.VenueID == Venue.Id)
             .OrderByDescending(r => r.ReviewDate)
             .ToListAsync();
 
-        // 5. Calculate average rating
+        //Calculate average rating
         if (Reviews.Count > 0)
         {
             AverageRating = Reviews.Average(r => r.Rating);
         }
 
-        // 6. Load user emails for reviews
+        //Load user emails for reviews
         var userIds = Reviews.Select(r => r.UserID).Distinct().ToList();
         var users = await context.Users
             .Where(u => userIds.Contains(u.Id))
             .ToListAsync();
         UserEmails = users.ToDictionary(u => u.Id, u => u.Email ?? "Anonymous");
 
-        // 7. Check if current user already reviewed
+        //Check if current user already reviewed
         if (!string.IsNullOrEmpty(CurrentUserId))
         {
             UserAlreadyReviewed = await context.Review

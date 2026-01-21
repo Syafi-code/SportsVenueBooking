@@ -113,7 +113,7 @@ else
         if (!string.IsNullOrEmpty(userId))
         {
             var appUser = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-            userSchoolID = appUser?.SchoolID;
+            userSchoolID = appUser?.SchoolId;
         }
 
         // Load venues - filter by user's school if student

@@ -1,0 +1,124 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using SportsVenueBooking.Domain
+@inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
+
+<PageTitle>Home - Sports Venue Booking</PageTitle>
+
+<!-- HERO SECTION -->
+<div class="hero-section">
+    <div class="hero-content">
+        <h1>BOOK YOUR SPORTS VENUE TODAY</h1>
+        <p>Access to sports facilities across Singapore's Polytechnic and ITE</p>
+
+        <div class="hero-buttons">
+            <AuthorizeView>
+                <Authorized>
+                    <a href="/venues" class="hero-btn btn-primary">Browse Venues</a>
+                    <a href="/bookings" class="hero-btn btn-secondary">My Bookings</a>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="/Account/Register" class="hero-btn btn-primary">Sign Up</a>
+                    <a href="/Account/Login" class="hero-btn btn-secondary">Login</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+
+    <div class="hero-image">
+        <img src="/images/sports.jpg" alt="Sports Venue" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;" />
+    </div>
+</div>
+@if (ActiveAnnouncements.Count > 0)
+{
+    <div class="announcements-section">
+        <h2>📢 Latest Announcements</h2>
+
+        <div class="announcements-grid">
+            @foreach (var announcement in ActiveAnnouncements)
+            {
+                <div class="announcement-card">
+                    <div class="announcement-header">
+                        <h3>@announcement.Title</h3>
+                        <span class="announcement-date">@announcement.PostedDate.ToString("MMM dd, yyyy")</span>
+                    </div>
+                    <p class="announcement-message">@announcement.Message</p>
+                </div>
+            }
+        </div>
+    </div>
+}
+<!-- HOW IT WORKS SECTION -->
+<div class="how-it-works">
+    <h2>How It Works</h2>
+
+    <div class="steps-grid">
+        <!-- STEP 1 -->
+        <div class="step-card">
+            <div class="step-number">1</div>
+            <h3>Register and Verify</h3>
+            <p>Sign up with your student email.</p>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="step-card">
+            <div class="step-number">2</div>
+            <h3>Book Your Venue</h3>
+            <p>Browse through available venues at your institution and book them.</p>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="step-card">
+            <div class="step-number">3</div>
+            <h3>Show Up And Play</h3>
+            <p>Show your booking confirmation at the venue.</p>
+        </div>
+    </div>
+</div>
+
+<!-- FAQ SECTION -->
+<div class="faq-section">
+    <h2>Frequently Asked Questions</h2>
+
+    <div class="faq-grid">
+        <div class="faq-card">
+            <h3>For Students</h3>
+            <div class="faq-placeholder">Questions And Answers</div>
+        </div>
+
+        <div class="faq-card">
+            <h3>For Students</h3>
+            <div class="faq-placeholder">Questions And Answers</div>
+        </div>
+    </div>
+</div>
+
+<!-- ABOUT US SECTION -->
+<div class="about-section">
+    <h2>About Us</h2>
+
+    <div class="about-content">
+        <h3>Our Story</h3>
+        <p>We created this platform to connect students with sports facilities across all Polytechnics and ITE. We noticed that students often struggle to find and book quality sports venues, while the schools utilities are being underutilized. Our platform allows for students to book the facilities for free while guests will have an entry fee.</p>
+
+        <h3>Our Mission</h3>
+        <p>To make all school sports facilities accessible to students and the public across all Polytechnics and ITE, promoting health and fitness to everyone.</p>
+    </div>
+</div>
+
+@code {
+    private List<Announcement> ActiveAnnouncements = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+
+        // Load only active announcements, newest first
+        ActiveAnnouncements = await context.Announcement
+            .Where(a => a.IsActive == true)
+            .OrderByDescending(a => a.PostedDate)
+            .Take(3)  // Show only 3 most recent
+            .ToListAsync();
+    }
+}

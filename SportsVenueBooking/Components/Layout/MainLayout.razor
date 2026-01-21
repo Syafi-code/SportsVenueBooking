@@ -1,19 +1,69 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+    <!-- TOP NAVIGATION BAR -->
+    <header class="top-navbar">
+        <div class="navbar-container">
+            <!-- LOGO -->
+            <a href="/" class="navbar-brand">🏀 Sports Venue</a>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <!-- NAVIGATION LINKS -->
+            <nav class="navbar-menu">
+                <AuthorizeView>
+                    <Authorized>
+                        <a href="/" class="nav-item">Home</a>
+                        <a href="/venues" class="nav-item">Venues</a>
+                        <a href="/bookings" class="nav-item">My Bookings</a>
+                        <a href="/reviews" class="nav-item">My Reviews</a>
+
+                        <!-- ADMIN ONLY -->
+                        <AuthorizeView Roles="Administrator" Context="adminContext">
+                            <Authorized>
+                                <a href="/admin/dashboard" class="nav-item nav-admin">Admin Dashboard</a>
+                                <a href="/announcements" class="nav-item nav-admin">Manage Announcements</a>
+                            </Authorized>
+                        </AuthorizeView>
+                    </Authorized>
+
+                    <NotAuthorized>
+                        <a href="/" class="nav-item">Home</a>
+                        <a href="/venues" class="nav-item">Venues</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </nav>
+
+            <!-- RIGHT SIDE: LOGIN/LOGOUT -->
+            <div class="navbar-actions">
+                <AuthorizeView>
+                    <Authorized>
+                        <span class="user-name">👤 @context.User.Identity?.Name</span>
+                        <form action="Account/Logout" method="post" style="display: inline; margin: 0;">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="returnUrl" value="" />
+                            <button type="submit" class="btn-logout">Logout</button>
+                        </form>
+                    </Authorized>
+
+                    <NotAuthorized>
+                        <a href="/Account/Login" class="btn-login">Login</a>
+                        <a href="/Account/Register" class="btn-signup">Sign Up</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
         </div>
+    </header>
 
+    <!-- MAIN CONTENT -->
+    <main>
         <article class="content px-4">
             @Body
         </article>
     </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <p>&copy; 2026 Sports Venue Booking. All rights reserved.</p>
+    </footer>
 </div>
 
 <div id="blazor-error-ui">

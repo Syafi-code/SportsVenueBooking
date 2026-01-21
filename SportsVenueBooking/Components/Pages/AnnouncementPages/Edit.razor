@@ -1,0 +1,84 @@
+﻿@page "/announcements/edit"
+@using Microsoft.EntityFrameworkCore
+@using SportsVenueBooking.Domain
+@inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit Announcement</PageTitle>
+
+<h1>Edit Announcement</h1>
+<hr />
+
+@if (Announcement == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-6">
+            <EditForm Model="Announcement" OnValidSubmit="UpdateAnnouncement" FormName="edit">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger" />
+
+                <div class="mb-3">
+                    <label class="form-label">Title</label>
+                    <InputText @bind-Value="Announcement.Title" class="form-control" />
+                    <ValidationMessage For="() => Announcement.Title" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Message</label>
+                    <InputTextArea @bind-Value="Announcement.Message" class="form-control" rows="5" />
+                    <ValidationMessage For="() => Announcement.Message" class="text-danger" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Active Status</label>
+                    <div class="form-check">
+                        <InputCheckbox @bind-Value="Announcement.IsActive" class="form-check-input" id="isActive" />
+                        <label class="form-check-label" for="isActive">
+                            Make this announcement active (visible to students)
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a href="/announcements" class="btn btn-secondary">Back to List</a>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Announcement? Announcement { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+
+        Announcement = await context.Announcement.FirstOrDefaultAsync(a => a.Id == Id);
+
+        if (Announcement == null)
+        {
+            NavigationManager.NavigateTo("/announcements");
+        }
+    }
+
+    private async Task UpdateAnnouncement()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+
+        // Update the date
+        Announcement!.DateUpdated = DateTime.Now;
+
+        context.Announcement.Update(Announcement);
+        await context.SaveChangesAsync();
+
+        NavigationManager.NavigateTo("/announcements");
+    }
+}

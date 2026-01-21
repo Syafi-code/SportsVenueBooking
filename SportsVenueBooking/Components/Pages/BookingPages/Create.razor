@@ -107,7 +107,7 @@
         if (!string.IsNullOrEmpty(userId))
         {
             var appUser = await context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-            userSchoolID = appUser?.SchoolID;
+            userSchoolID = appUser?.SchoolId;
         }
 
         // Load venues - filter by user's school if student, all venues if admin
@@ -202,6 +202,6 @@
 
         context.Booking.Add(Booking);
         await context.SaveChangesAsync();
-        NavigationManager.NavigateTo("/bookings");
+        NavigationManager.NavigateTo($"/bookings/details?id={Booking.Id}");
     }
 }

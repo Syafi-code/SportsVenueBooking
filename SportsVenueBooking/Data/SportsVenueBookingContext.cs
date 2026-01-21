@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SportsVenueBooking.Configurations;
 using SportsVenueBooking.Data;
+using SportsVenueBooking.Domain;
 
 namespace SportsVenueBooking.Data
 {
@@ -9,9 +10,9 @@ namespace SportsVenueBooking.Data
     {
         public DbSet<SportsVenueBooking.Domain.School> Schools { get; set; } = default!;
         public DbSet<SportsVenueBooking.Domain.Venue> Venue { get; set; } = default!;
-        public DbSet<SportsVenueBooking.Domain.Payment> Payment { get; set; } = default!;
         public DbSet<SportsVenueBooking.Domain.Booking> Booking { get; set; } = default!;
         public DbSet<SportsVenueBooking.Domain.Review> Review { get; set; } = default!;
+        public DbSet<SportsVenueBooking.Domain.Announcement> Announcement { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

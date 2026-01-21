@@ -1,0 +1,75 @@
+﻿@page "/announcements/delete"
+@using Microsoft.EntityFrameworkCore
+@using SportsVenueBooking.Domain
+@inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Delete Announcement</PageTitle>
+
+<h1>Delete Announcement</h1>
+<hr />
+
+@if (Announcement == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="alert alert-danger">
+        <h4>Are you sure you want to delete this announcement?</h4>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">@Announcement.Title</h5>
+            <p class="card-text">@Announcement.Message</p>
+            <p class="text-muted">
+                <strong>Posted:</strong> @Announcement.PostedDate.ToString("MMM dd, yyyy")<br />
+                <strong>Status:</strong>
+                @if (Announcement.IsActive)
+                {
+                    <span class="badge bg-success">Active</span>
+                }
+                else
+                {
+                    <span class="badge bg-secondary">Inactive</span>
+                }
+            </p>
+        </div>
+    </div>
+
+    <EditForm Model="Announcement" OnValidSubmit="DeleteAnnouncement" FormName="delete">
+        <button type="submit" class="btn btn-danger">Delete</button>
+        <a href="/announcements" class="btn btn-secondary">Cancel</a>
+    </EditForm>
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private Announcement? Announcement { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+
+        Announcement = await context.Announcement.FirstOrDefaultAsync(a => a.Id == Id);
+
+        if (Announcement == null)
+        {
+            NavigationManager.NavigateTo("/announcements");
+        }
+    }
+
+    private async Task DeleteAnnouncement()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+
+        context.Announcement.Remove(Announcement!);
+        await context.SaveChangesAsync();
+
+        NavigationManager.NavigateTo("/announcements");
+    }
+}

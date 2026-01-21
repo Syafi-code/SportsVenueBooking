@@ -1,80 +1,183 @@
 ﻿@page "/bookings/details"
 @using Microsoft.EntityFrameworkCore
 @using SportsVenueBooking.Domain
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@attribute [Authorize(Roles = "Student,Administrator")]
 @inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Booking Details</PageTitle>
 
 <h1>Booking Details</h1>
 <hr />
 
-@if (booking is null)
+@if (Booking == null)
 {
     <p><em>Loading...</em></p>
 }
 else
 {
-    <dl class="row">
-        <dt class="col-sm-3">Venue:</dt>
-        <dd class="col-sm-9">@VenueName</dd>
+    <div class="row">
+        <!-- BOOKING DETAILS CARD -->
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">📋 Booking Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Booking ID:</dt>
+                        <dd class="col-sm-8">#@Booking.Id</dd>
 
-        <dt class="col-sm-2">Booking Date:</dt>
-        <dd class="col-sm-10">@booking.BookingDate.ToString("dddd, MMMM dd, yyyy")</dd>
+                        <dt class="col-sm-4">Venue:</dt>
+                        <dd class="col-sm-8">@GetVenueName(Booking.VenueID)</dd>
 
-        <dt class="col-sm-2">Start Time:</dt>
-        <dd class="col-sm-10">@booking.StartTime.ToString("hh:mm tt")</dd>
+                        <dt class="col-sm-4">Date:</dt>
+                        <dd class="col-sm-8">@Booking.BookingDate.ToString("MMMM dd, yyyy")</dd>
 
-        <dt class="col-sm-2">End Time:</dt>
-        <dd class="col-sm-10">@booking.EndTime.ToString("hh:mm tt")</dd>
+                        <dt class="col-sm-4">Time:</dt>
+                        <dd class="col-sm-8">@Booking.StartTime.ToString("HH:mm") - @Booking.EndTime.ToString("HH:mm")</dd>
 
-        <dt class="col-sm-2">Status</dt>
-        <dd class="col-sm-10">
-            @if (booking.Status == "Confirmed")
-            {
-                <span class="badge bg-success">@booking.Status</span>
-            }
-            else
-            {
-                <span class="badge bg-danger">@booking.Status</span>
-            }
-        </dd>
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">
+                            @if (Booking.Status == "Confirmed")
+                            {
+                                <span class="badge bg-success">@Booking.Status</span>
+                            }
+                            else if (Booking.Status == "Cancelled")
+                            {
+                                <span class="badge bg-danger">@Booking.Status</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@Booking.Status</span>
+                            }
+                        </dd>
 
-        @if (!string.IsNullOrEmpty(booking.SpecialRequests))
-        {
-            <dt class="col-sm-2">Special Requests</dt>
-            <dd class="col-sm-10">@booking.SpecialRequests</dd>
-        }
-    </dl>
-    <div>
-        @if (booking.Status == "Confirmed")
-        {
-            <a href="@($"/bookings/edit?id={booking.Id}")" class="btn btn-warning">Edit</a>
-        }
-        <a href="/bookings" class="btn btn-secondary">Back to List</a>
+                        @if (!string.IsNullOrEmpty(Booking.SpecialRequests))
+                        {
+                            <dt class="col-sm-4">Special Requests:</dt>
+                            <dd class="col-sm-8">@Booking.SpecialRequests</dd>
+                        }
+
+                        <dt class="col-sm-4">Created:</dt>
+                        <dd class="col-sm-8">@Booking.DateCreated.ToString("MMM dd, yyyy HH:mm")</dd>
+                    </dl>
+
+                    <!-- ACTION BUTTONS -->
+                    <div class="mt-3">
+
+                        <a href="/bookings" class="btn btn-secondary">Back to List</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR CODE CARD -->
+        <div class="col-md-6">
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">📱 Your QR Code Ticket</h5>
+                </div>
+                <div class="card-body text-center">
+                    @if (Booking.Status == "Confirmed")
+                    {
+                        <!-- QR CODE FROM GOQR API -->
+                        <img src="@QRCodeUrl"
+                             alt="Booking QR Code"
+                             class="img-fluid mb-3 border rounded p-2"
+                             style="max-width: 300px; background: white;" />
+
+                        <p class="text-muted mb-3">
+                            <i class="bi bi-info-circle"></i>
+                            Show this QR code when you arrive at the venue
+                        </p>
+
+                        <!-- DOWNLOAD BUTTON -->
+                        <a href="@QRCodeUrl"
+                           download="booking-@Booking.Id-qrcode.png"
+                           class="btn btn-sm btn-outline-primary">
+                            📥 Download QR Code
+                        </a>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <p>QR Code is only available for confirmed bookings.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
     </div>
-    }
+}
 
 @code {
-    private Booking? booking;
-    private string? VenueName;
-
     [SupplyParameterFromQuery]
     private int Id { get; set; }
+
+    private Booking? Booking;
+    private Dictionary<int, string> VenueNames = new();
+    private string QRCodeUrl = "";
+    private bool CanEdit = false;
+    private string? CurrentUserId;
 
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        booking = await context.Booking.FirstOrDefaultAsync(m => m.Id == Id);
 
-        if (booking is null)
+        // Load booking
+        Booking = await context.Booking.FirstOrDefaultAsync(b => b.Id == Id);
+
+        if (Booking == null)
         {
-            NavigationManager.NavigateTo("notfound");
+            NavigationManager.NavigateTo("/bookings");
             return;
         }
 
+        // Get current user ID
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        CurrentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        // Check if user can edit (own booking or admin)
+        CanEdit = user.IsInRole("Administrator") || Booking.UserID == CurrentUserId;
+
+        // Load venue names
+        var venues = await context.Venue.ToListAsync();
+        VenueNames = venues.ToDictionary(v => v.Id, v => v.VenueName ?? "Unknown Venue");
+
+        // Generate QR Code URL
+        QRCodeUrl = GenerateQRCodeUrl();
+    }
+
+    private string GetVenueName(int venueId)
+    {
+        return VenueNames.TryGetValue(venueId, out var name) ? name : "Unknown Venue";
+    }
+
+    private string GenerateQRCodeUrl()
+    {
         // Get venue name
-        var venue = await context.Venue.FirstOrDefaultAsync(v => v.Id == booking.VenueID);
-        VenueName = venue?.VenueName ?? "Unknown Venue";
+        string venueName = GetVenueName(Booking.VenueID);
+
+        // Create booking information text
+        string bookingInfo = $"SPORTS VENUE BOOKING\n" +
+                           $"━━━━━━━━━━━━━━━━━━━━\n" +
+                           $"Booking ID: {Booking.Id}\n" +
+                           $"Venue: {venueName}\n" +
+                           $"Date: {Booking.BookingDate:yyyy-MM-dd}\n" +
+                           $"Time: {Booking.StartTime:HH:mm} - {Booking.EndTime:HH:mm}\n" +
+                           $"Status: {Booking.Status}\n" +
+                           $"━━━━━━━━━━━━━━━━━━━━\n" +
+                           $"Scan at venue for check-in";
+
+        // URL encode the data
+        string encodedData = Uri.EscapeDataString(bookingInfo);
+
+        // Generate GoQR API URL
+        return $"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={encodedData}";
     }
 }

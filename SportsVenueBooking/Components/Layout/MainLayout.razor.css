@@ -1,81 +1,161 @@
 .page {
-    position: relative;
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
 }
 
 main {
     flex: 1;
+    padding-top: 70px;
+    min-height: 100vh;
 }
 
-.sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+/* ===== TOP NAVBAR ===== */
+.top-navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: white;
+    border-bottom: 1px solid #E5E7EB;
+    z-index: 1000;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.top-row {
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #d6d5d5;
-    justify-content: flex-end;
-    height: 3.5rem;
+.navbar-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    height: 100%;
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+}
+
+/* ===== LOGO ===== */
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1F2937;
+    text-decoration: none;
+}
+
+    .navbar-brand:hover {
+        color: #2563EB;
+    }
+
+/* ===== NAVIGATION MENU ===== */
+.navbar-menu {
+    display: flex;
+    gap: 0.5rem;
     align-items: center;
 }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        white-space: nowrap;
-        margin-left: 1.5rem;
-        text-decoration: none;
-    }
-
-    .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
-        text-decoration: underline;
-    }
-
-    .top-row ::deep a:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-@media (max-width: 640.98px) {
-    .top-row {
-        justify-content: space-between;
-    }
-
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        margin-left: 0;
-    }
+.nav-item {
+    padding: 0.5rem 1rem;
+    color: #6B7280;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    transition: all 0.2s;
 }
 
-@media (min-width: 641px) {
-    .page {
-        flex-direction: row;
+    .nav-item:hover {
+        color: #2563EB;
+        background: #F3F4F6;
     }
 
-    .sidebar {
-        width: 250px;
-        height: 100vh;
-        position: sticky;
-        top: 0;
-    }
-
-    .top-row {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-    }
-
-    .top-row.auth ::deep a:first-child {
-        flex: 1;
-        text-align: right;
-        width: 0;
-    }
-
-    .top-row, article {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
-    }
+.nav-admin {
+    color: #DC2626;
 }
 
+    .nav-admin:hover {
+        background: #FEE2E2;
+        color: #DC2626;
+    }
+
+/* ===== RIGHT SIDE ACTIONS ===== */
+.navbar-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.user-name {
+    color: #1F2937;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.btn-logout {
+    padding: 0.5rem 1.25rem;
+    background: #EF4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+    .btn-logout:hover {
+        background: #DC2626;
+    }
+
+.btn-login {
+    padding: 0.5rem 1.25rem;
+    border: 1px solid #E5E7EB;
+    background: white;
+    color: #1F2937;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+    .btn-login:hover {
+        border-color: #2563EB;
+        color: #2563EB;
+    }
+
+.btn-signup {
+    padding: 0.5rem 1.25rem;
+    background: #2563EB;
+    color: white;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+    .btn-signup:hover {
+        background: #1E40AF;
+        color: white;
+    }
+
+/* ===== CONTENT AREA ===== */
+.content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* ===== FOOTER ===== */
+.footer {
+    background: #F9FAFB;
+    border-top: 1px solid #E5E7EB;
+    padding: 1.5rem;
+    text-align: center;
+    color: #6B7280;
+    font-size: 0.875rem;
+}
+
+/* ===== ERROR UI ===== */
 #blazor-error-ui {
     background: lightyellow;
     bottom: 0;
@@ -88,9 +168,9 @@ main {
     z-index: 1000;
 }
 
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
-    }
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}

@@ -1,0 +1,67 @@
+﻿@page "/announcements/details"
+@using Microsoft.EntityFrameworkCore
+@using SportsVenueBooking.Domain
+@inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Announcement Details</PageTitle>
+
+<h1>Announcement Details</h1>
+<hr />
+
+@if (Announcement == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="card">
+        <div class="card-header">
+            <h3>@Announcement.Title</h3>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Message</dt>
+                <dd class="col-sm-9">@Announcement.Message</dd>
+
+                <dt class="col-sm-3">Posted Date</dt>
+                <dd class="col-sm-9">@Announcement.PostedDate.ToString("MMMM dd, yyyy")</dd>
+
+                <dt class="col-sm-3">Status</dt>
+                <dd class="col-sm-9">
+                    @if (Announcement.IsActive)
+                    {
+                        <span class="badge bg-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Inactive</span>
+                    }
+                </dd>
+            </dl>
+
+            <a href="@($"/announcements/edit?id={Announcement.Id}")" class="btn btn-warning">Edit</a>
+            <a href="@($"/announcements/delete?id={Announcement.Id}")" class="btn btn-danger">Delete</a>
+            <a href="/announcements" class="btn btn-secondary">Back to List</a>
+        </div>
+    </div>
+}
+
+@code {
+    [SupplyParameterFromQuery]
+    private int Id { get; set; }
+
+    private Announcement? Announcement;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+
+        Announcement = await context.Announcement.FirstOrDefaultAsync(a => a.Id == Id);
+
+        if (Announcement == null)
+        {
+            NavigationManager.NavigateTo("/announcements");
+        }
+    }
+}
