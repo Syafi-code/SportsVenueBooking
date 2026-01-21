@@ -1,4 +1,5 @@
 ﻿@page "/venues/edit"
+@rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Authorization
 @using SportsVenueBooking.Domain
@@ -21,63 +22,52 @@ else
         <div class="col-md-8">
             <div class="card">
                 <div class="card-body">
-                    <EditForm Model="Venue" OnValidSubmit="UpdateVenue" FormName="edit" Enhance>
-                        <DataAnnotationsValidator />
-                        <ValidationSummary class="text-danger" />
+                    <!-- VENUE NAME -->
+                    <div class="mb-3">
+                        <label class="form-label">Venue Name</label>
+                        <input type="text" @bind="Venue.VenueName" @bind:event="oninput" class="form-control" />
+                    </div>
 
-                        <input type="hidden" @bind="Venue.Id" />
+                    <!-- VENUE TYPE -->
+                    <div class="mb-3">
+                        <label class="form-label">Venue Type</label>
+                        <select @bind="Venue.VenueType" class="form-select">
+                            <option value="">-- Select Type --</option>
+                            <option value="Basketball">Basketball</option>
+                            <option value="Football">Football</option>
+                            <option value="Swimming">Swimming</option>
+                            <option value="Badminton">Badminton</option>
+                            <option value="Tennis">Tennis</option>
+                            <option value="Gym">Gym</option>
+                        </select>
+                    </div>
 
-                        <!-- VENUE NAME -->
-                        <div class="mb-3">
-                            <label for="venuename" class="form-label">Venue Name</label>
-                            <InputText id="venuename" @bind-Value="Venue.VenueName" class="form-control" />
-                            <ValidationMessage For="() => Venue.VenueName" class="text-danger" />
-                        </div>
+                    <!-- CAPACITY -->
+                    <div class="mb-3">
+                        <label class="form-label">Capacity</label>
+                        <input type="number" @bind="Venue.Capacity" @bind:event="oninput" class="form-control" />
+                    </div>
 
-                        <!-- VENUE TYPE -->
-                        <div class="mb-3">
-                            <label for="venuetype" class="form-label">Venue Type</label>
-                            <InputSelect id="venuetype" @bind-Value="Venue.VenueType" class="form-select">
-                                <option value="">-- Select Type --</option>
-                                <option value="Basketball">Basketball</option>
-                                <option value="Football">Football</option>
-                                <option value="Swimming">Swimming</option>
-                                <option value="Badminton">Badminton</option>
-                                <option value="Tennis">Tennis</option>
-                                <option value="Gym">Gym</option>
-                            </InputSelect>
-                            <ValidationMessage For="() => Venue.VenueType" class="text-danger" />
-                        </div>
+                    <!-- SCHOOL -->
+                    <div class="mb-3">
+                        <label class="form-label">School</label>
+                        <select @bind="Venue.SchoolID" class="form-select">
+                            <option value="0">-- Select School --</option>
+                            @foreach (var school in Schools)
+                            {
+                                <option value="@school.Id">@school.SchoolName</option>
+                            }
+                        </select>
+                    </div>
 
-                        <!-- CAPACITY -->
-                        <div class="mb-3">
-                            <label for="capacity" class="form-label">Capacity</label>
-                            <InputNumber id="capacity" @bind-Value="Venue.Capacity" class="form-control" />
-                            <ValidationMessage For="() => Venue.Capacity" class="text-danger" />
-                        </div>
+                    <!-- IS AVAILABLE -->
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" @bind="Venue.IsAvailable" class="form-check-input" id="isavailable" />
+                        <label class="form-check-label" for="isavailable">Is Available</label>
+                    </div>
 
-                        <!-- SCHOOL -->
-                        <div class="mb-3">
-                            <label for="school" class="form-label">School</label>
-                            <InputSelect id="school" @bind-Value="Venue.SchoolID" class="form-select">
-                                <option value="0">-- Select School --</option>
-                                @foreach (var school in Schools)
-                                {
-                                    <option value="@school.Id">@school.SchoolName</option>
-                                }
-                            </InputSelect>
-                            <ValidationMessage For="() => Venue.SchoolID" class="text-danger" />
-                        </div>
-
-                        <!-- IS AVAILABLE -->
-                        <div class="mb-3 form-check">
-                            <InputCheckbox id="isavailable" @bind-Value="Venue.IsAvailable" class="form-check-input" />
-                            <label for="isavailable" class="form-check-label">Is Available</label>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                        <a href="/venues" class="btn btn-secondary">Cancel</a>
-                    </EditForm>
+                    <button @onclick="UpdateVenue" class="btn btn-primary">Save Changes</button>
+                    <a href="/venues" class="btn btn-secondary">Cancel</a>
                 </div>
             </div>
         </div>
@@ -88,56 +78,46 @@ else
     [SupplyParameterFromQuery]
     private int Id { get; set; }
 
-    [SupplyParameterFromForm]
-    private Domain.Venue? Venue { get; set; }
-
+    private Venue? Venue { get; set; }
     private List<School> Schools = new();
 
     protected override async Task OnInitializedAsync()
     {
-        using var context = DbFactory.CreateDbContext();
+        using var context = await DbFactory.CreateDbContextAsync();
 
-        Venue ??= await context.Venue.FirstOrDefaultAsync(m => m.Id == Id);
+        Venue = await context.Venue.FirstOrDefaultAsync(m => m.Id == Id);
 
-        if (Venue == null)
+        if (Venue is null)
         {
             NavigationManager.NavigateTo("/venues");
             return;
         }
 
-        // Load schools for dropdown
         Schools = await context.Schools.ToListAsync();
     }
 
     private async Task UpdateVenue()
     {
-        using var context = DbFactory.CreateDbContext();
+        if (Venue is null) return;
 
-        context.Attach(Venue!).State = EntityState.Modified;
+        using var context = await DbFactory.CreateDbContextAsync();
 
-        try
+        var existingVenue = await context.Venue.FindAsync(Id);
+
+        if (existingVenue is null)
         {
-            await context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!await VenueExists(Venue!.Id))
-            {
-                NavigationManager.NavigateTo("/venues");
-                return;
-            }
-            else
-            {
-                throw;
-            }
+            NavigationManager.NavigateTo("/venues");
+            return;
         }
 
+        existingVenue.VenueName = Venue.VenueName;
+        existingVenue.VenueType = Venue.VenueType;
+        existingVenue.Capacity = Venue.Capacity;
+        existingVenue.SchoolID = Venue.SchoolID;
+        existingVenue.IsAvailable = Venue.IsAvailable;
+        existingVenue.DateUpdated = DateTime.Now;
+
+        await context.SaveChangesAsync();
         NavigationManager.NavigateTo("/venues");
-    }
-
-    private async Task<bool> VenueExists(int id)
-    {
-        using var context = DbFactory.CreateDbContext();
-        return await context.Venue.AnyAsync(e => e.Id == id);
     }
 }

@@ -62,7 +62,7 @@
         }
 
 .hero-image {
-    background: #E5E7EB;
+    background: transparent;
     border-radius: 12px;
     height: 400px;
     display: flex;
@@ -149,8 +149,9 @@
 
 .faq-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
     gap: 2rem;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 .faq-card {
@@ -158,6 +159,7 @@
     padding: 2rem;
     border-radius: 12px;
     border: 1px solid #E5E7EB;
+    
 }
 
     .faq-card h3 {
@@ -167,14 +169,11 @@
         margin-bottom: 1.5rem;
     }
 
-.faq-placeholder {
-    background: #E5E7EB;
-    padding: 4rem 2rem;
-    border-radius: 8px;
-    text-align: center;
-    color: #9CA3AF;
-    font-weight: 500;
-}
+    .faq-card p {
+        color: #6B7280;
+        line-height: 1.6;
+        margin: 0;
+    }
 
 /* ===== ABOUT SECTION ===== */
 .about-section {

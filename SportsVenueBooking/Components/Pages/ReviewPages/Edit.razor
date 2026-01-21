@@ -160,7 +160,7 @@ else
         }
 
         // Update fields directly
-        originalReview.Rating = SelectedRating; // Use SelectedRating variable!
+        originalReview.Rating = SelectedRating; // Use SelectedRating variable
         originalReview.Comment = Review.Comment;
         originalReview.DateUpdated = DateTime.Now;
         originalReview.UpdatedBy = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.Name ?? "Student";

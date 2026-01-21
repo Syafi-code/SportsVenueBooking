@@ -95,7 +95,7 @@ else
         var venues = await context.Venue.ToListAsync();
         VenueNames = venues.ToDictionary(v => v.Id, v => v.VenueName ?? "Unknown Venue");
 
-        // Load user's reviews
+        // Load user reviews
         MyReviews = await context.Review
             .Where(r => r.UserID == CurrentUserId)
             .OrderByDescending(r => r.ReviewDate)

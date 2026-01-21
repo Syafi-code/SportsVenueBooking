@@ -103,7 +103,7 @@
         // Get user ID
         var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        // Get user's school ID
+        // Get user school ID
         int? userSchoolID = null;
         if (!string.IsNullOrEmpty(userId))
         {
