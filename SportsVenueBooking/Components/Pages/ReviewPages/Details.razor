@@ -39,27 +39,8 @@ else
                 <dt class="col-sm-3">Review Date:</dt>
                 <dd class="col-sm-9">@review.ReviewDate.ToString("dddd, MMMM dd, yyyy")</dd>
 
-                <dt class="col-sm-3">Status:</dt>
-                <dd class="col-sm-9">
-                    @if (review.IsApproved)
-                    {
-                        <span class="badge bg-success">Approved</span>
-                    }
-                    else
-                    {
-                        <span class="badge bg-warning">Pending Approval</span>
-                    }
-                </dd>
 
-                @if (!string.IsNullOrEmpty(review.AdminResponse))
-                {
-                    <dt class="col-sm-3">Admin Response:</dt>
-                    <dd class="col-sm-9">
-                        <div class="p-3 bg-light rounded">
-                            @review.AdminResponse
-                        </div>
-                    </dd>
-                }
+
             </dl>
         </div>
     </div>

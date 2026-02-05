@@ -8,9 +8,9 @@
 @inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>My Reviews</PageTitle>
+<PageTitle>@(IsAdmin ? "All Reviews" : "My Reviews")</PageTitle>
 
-<h1>My Reviews</h1>
+<h1>@(IsAdmin ? "All Reviews" : "My Reviews")</h1>
 <hr />
 
 @if (MyReviews.Count == 0)
@@ -44,31 +44,25 @@ else
                             <strong>Reviewed on:</strong> @review.ReviewDate.ToString("MMMM dd, yyyy")
                         </p>
 
+                        <!-- Show user email for admins -->
+                        @if (IsAdmin && !string.IsNullOrEmpty(review.UserID))
+                        {
+                            <p class="text-muted small mb-2">
+                                <strong>By:</strong> @GetUserEmail(review.UserID)
+                            </p>
+                        }
                         <!-- Comment -->
                         <p class="card-text">@review.Comment</p>
 
-                        <!-- Admin Response (if exists) -->
-                        @if (!string.IsNullOrEmpty(review.AdminResponse))
-                        {
-                            <div class="mt-2 p-2 bg-light rounded">
-                                <small><strong>Admin Response:</strong> @review.AdminResponse</small>
-                            </div>
-                        }
 
-                        <!-- Approval Status -->
-                        @if (review.IsApproved)
-                        {
-                            <span class="badge bg-success">Approved ✓</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-warning">Pending Approval</span>
-                        }
                     </div>
 
                     <!-- Action Buttons -->
                     <div class="ms-3">
-                        <a href="@($"/reviews/edit?id={review.Id}")" class="btn btn-sm btn-warning mb-1">Edit</a>
+                        @if (!IsAdmin || review.UserID == CurrentUserId)
+                        {
+                            <a href="@($"/reviews/edit?id={review.Id}")" class="btn btn-sm btn-warning mb-1">Edit</a>
+                        }
                         <a href="@($"/reviews/delete?id={review.Id}")" class="btn btn-sm btn-danger">Delete</a>
                     </div>
                 </div>
@@ -80,30 +74,52 @@ else
 @code {
     private List<Review> MyReviews = new();
     private Dictionary<int, string> VenueNames = new();
+    private Dictionary<string, string> UserEmails = new();
     private string? CurrentUserId;
+    private bool IsAdmin = false;
 
     protected override async Task OnInitializedAsync()
     {
-        using var context = DbFactory.CreateDbContext();
+        using var context = await DbFactory.CreateDbContextAsync();
 
         // Get current user ID
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         CurrentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        IsAdmin = user.IsInRole("Administrator");
 
         // Load venue names
         var venues = await context.Venue.ToListAsync();
         VenueNames = venues.ToDictionary(v => v.Id, v => v.VenueName ?? "Unknown Venue");
 
-        // Load user reviews
-        MyReviews = await context.Review
-            .Where(r => r.UserID == CurrentUserId)
-            .OrderByDescending(r => r.ReviewDate)
-            .ToListAsync();
+        // Load user emails (for admin view)
+        var users = await context.Users.ToListAsync();
+        UserEmails = users.ToDictionary(u => u.Id, u => u.Email ?? "Unknown User");
+
+        // Load reviews - admins see all, students see only their own
+        if (IsAdmin)
+        {
+            MyReviews = await context.Review
+                .OrderByDescending(r => r.ReviewDate)
+                .ToListAsync();
+        }
+        else
+        {
+            MyReviews = await context.Review
+                .Where(r => r.UserID == CurrentUserId)
+                .OrderByDescending(r => r.ReviewDate)
+                .ToListAsync();
+        }
     }
 
     private string GetVenueName(int venueId)
     {
         return VenueNames.TryGetValue(venueId, out var name) ? name : "Unknown Venue";
+    }
+
+    private string GetUserEmail(string? userId)
+    {
+        if (string.IsNullOrEmpty(userId)) return "Unknown User";
+        return UserEmails.TryGetValue(userId, out var email) ? email : "Unknown User";
     }
 }

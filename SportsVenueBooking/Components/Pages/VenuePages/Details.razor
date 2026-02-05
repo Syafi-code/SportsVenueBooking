@@ -28,7 +28,6 @@ else
             <p><strong>School:</strong> @SchoolName</p>
             <p><strong>Capacity:</strong> @Venue.Capacity people</p>
             <p><strong>Opening Hours:</strong> @Venue.OpeningHours</p>
-            <p><strong>Facilities:</strong> @(string.IsNullOrEmpty(Venue.Facilities) ? "Not specified" : Venue.Facilities)</p>
 
             @if (Venue.IsAvailable)
             {
@@ -109,13 +108,6 @@ else
                         <p class="mb-1">@review.Comment</p>
                         <small class="text-muted">By: @GetUserEmail(review.UserID)</small>
 
-                        <!-- ADMIN RESPONSE -->
-                        @if (!string.IsNullOrEmpty(review.AdminResponse))
-                        {
-                            <div class="mt-2 p-2 bg-light rounded">
-                                <small><strong>Admin Response:</strong> @review.AdminResponse</small>
-                            </div>
-                        }
 
                         <!-- EDIT/DELETE BUTTONS (only for your own reviews) -->
                         <AuthorizeView Roles="Student">

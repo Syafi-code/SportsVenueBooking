@@ -1,9 +1,10 @@
 ﻿@page "/reviews/delete"
+@rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
 @using SportsVenueBooking.Domain
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
-@attribute [Authorize(Roles = "Student")]
+@attribute [Authorize]
 @inject IDbContextFactory<SportsVenueBooking.Data.SportsVenueBookingContext> DbFactory
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -40,46 +41,49 @@ else
 
             <p class="text-muted small">Reviewed on: @Review.ReviewDate.ToString("MMMM dd, yyyy")</p>
             <p>@Review.Comment</p>
+
+            @if (!string.IsNullOrEmpty(Review.UserID))
+            {
+                <p class="text-muted small">By: @Review.UserID</p>
+            }
         </div>
     </div>
 
-    <EditForm Model="Review" OnValidSubmit="DeleteReview" FormName="deleteReview" Enhance>
-        <button type="submit" class="btn btn-danger">Yes, Delete This Review</button>
-        <a href="/reviews" class="btn btn-secondary">Cancel</a>
-    </EditForm>
+    <button @onclick="DeleteReview" class="btn btn-danger">Yes, Delete This Review</button>
+    <a href="/admin/dashboard" class="btn btn-secondary">Cancel</a>
 }
 
 @code {
     [SupplyParameterFromQuery]
     private int Id { get; set; }
 
-    [SupplyParameterFromForm(FormName = "deleteReview")]
-    private Review Review { get; set; } = default!;
-
+    private Review? Review;
     private string? VenueName;
     private string? ErrorMessage;
     private string? CurrentUserId;
+    private bool IsAdmin = false;
 
     protected override async Task OnInitializedAsync()
     {
-        using var context = DbFactory.CreateDbContext();
+        using var context = await DbFactory.CreateDbContextAsync();
 
         // Get current user
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         CurrentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        IsAdmin = user.IsInRole("Administrator");
 
         // Load the review
         Review = await context.Review.FirstOrDefaultAsync(r => r.Id == Id);
 
         if (Review == null)
         {
-            NavigationManager.NavigateTo("/reviews");
+            NavigationManager.NavigateTo("/admin/dashboard");
             return;
         }
 
-        // Check if this review belongs to current user
-        if (Review.UserID != CurrentUserId)
+        // Allow admins to delete any review, students only their own
+        if (!IsAdmin && Review.UserID != CurrentUserId)
         {
             ErrorMessage = "You can only delete your own reviews!";
             return;
@@ -92,12 +96,18 @@ else
 
     private async Task DeleteReview()
     {
-        using var context = DbFactory.CreateDbContext();
+        if (Review == null) return;
 
-        // Delete the review
-        context.Review.Remove(Review);
-        await context.SaveChangesAsync();
+        using var context = await DbFactory.CreateDbContextAsync();
 
-        NavigationManager.NavigateTo("/reviews");
+        var reviewToDelete = await context.Review.FindAsync(Id);
+
+        if (reviewToDelete != null)
+        {
+            context.Review.Remove(reviewToDelete);
+            await context.SaveChangesAsync();
+        }
+
+        NavigationManager.NavigateTo("/admin/dashboard");
     }
 }

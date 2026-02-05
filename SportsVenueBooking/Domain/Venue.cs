@@ -6,7 +6,6 @@
         public string? VenueType { get; set; }
         public string? OpeningHours { get; set; }
         public int Capacity { get; set; }
-        public string? Facilities { get; set; }
         public bool IsAvailable { get; set; }
         public int SchoolID { get; set; }
     }

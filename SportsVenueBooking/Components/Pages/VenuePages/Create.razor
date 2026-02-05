@@ -72,11 +72,6 @@
                 <small class="text-muted">All venues operate 9:00 AM - 9:00 PM</small>
             </div>
 
-            <div class="mb-3">
-                <label for="facilities" class="form-label">Facilities (Optional):</label>
-                <InputTextArea id="facilities" @bind-Value="Venue.Facilities" class="form-control" rows="3" placeholder="e.g., Lockers, Showers, Air-conditioned" />
-                <ValidationMessage For="() => Venue.Facilities" class="text-danger" />
-            </div>
 
             <div class="alert alert-info" role="alert">
                 <small><strong>Note:</strong> New venues are automatically set to "Available". You can change this later by editing the venue.</small>
